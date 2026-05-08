@@ -322,7 +322,7 @@
     const previewImg = document.getElementById('previewImg');
 
     let mediaStream = null;
-    let currentPhotoData = null;      // 存储拍照的 base64 数据
+    let currentPhotoData = null;
 
     // ---------- 语言更新 ----------
     function updateLanguage(lang) {
@@ -343,49 +343,32 @@
     });
 
     // ---------- 相机资源管理 ----------
-    async function stopCameraStream() {
+    function stopCameraStream() {
         if (mediaStream) {
             mediaStream.getTracks().forEach(track => track.stop());
             mediaStream = null;
         }
-        if (video.srcObject) {
-            video.srcObject = null;
-        }
+        if (video.srcObject) video.srcObject = null;
     }
 
-    // 最高像素后置摄像头（理想值 4K，自动降级但保证最高可用）
     async function initHighResCamera() {
-        const constraints = {
-            video: {
-                facingMode: { exact: "environment" },
-                width: { ideal: 3840 },
-                height: { ideal: 2160 }
-            }
-        };
         try {
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
-            return stream;
-        } catch (err) {
-            // 降级：不强制 facingMode，但仍然优先高分辨率
-            console.warn("fallback to default camera", err);
-            const fallbackStream = await navigator.mediaDevices.getUserMedia({
+            return await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "environment", width: { ideal: 3840 }, height: { ideal: 2160 } }
+            });
+        } catch (e) {
+            return await navigator.mediaDevices.getUserMedia({
                 video: { width: { ideal: 3840 }, height: { ideal: 2160 } }
             });
-            return fallbackStream;
         }
     }
 
     async function enterCamera() {
-        // 关闭已有流
-        await stopCameraStream();
+        stopCameraStream();
         try {
-            const stream = await initHighResCamera();
-            mediaStream = stream;
-            video.srcObject = stream;
-            await new Promise((resolve) => {
-                if (video.readyState >= 2) resolve();
-                else video.onloadedmetadata = () => resolve();
-            });
+            mediaStream = await initHighResCamera();
+            video.srcObject = mediaStream;
+            await new Promise(r => video.onloadedmetadata = r);
             await video.play();
             homePage.style.display = 'none';
             cameraPage.style.display = 'block';
@@ -393,171 +376,83 @@
         } catch (err) {
             alert(i18n[currentLang].alertPermission);
             homePage.style.display = 'flex';
-            cameraPage.style.display = 'none';
         }
     }
 
-    // 拍照核心 (返回 base64)
+    // 拍照
     function capturePhotoAsBase64() {
-        if (!video.videoWidth || !video.videoHeight) {
-            return null;
-        }
         captureCanvas.width = video.videoWidth;
         captureCanvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-        // 使用原始画质，PNG 格式保证无损
+        ctx.drawImage(video, 0, 0);
         return captureCanvas.toDataURL('image/png');
     }
 
-    // 快门点击：拍照 -> 存储数据 -> 跳转预览
+    // 快门点击
     function onShutterClick() {
-        if (!mediaStream || !video.videoWidth || video.readyState !== 4) {
-            alert(i18n[currentLang].alertCaptureFail);
-            return;
-        }
-        const photoData = capturePhotoAsBase64();
-        if (!photoData) {
-            alert(i18n[currentLang].alertCaptureFail);
-            return;
-        }
-        currentPhotoData = photoData;
+        currentPhotoData = capturePhotoAsBase64();
         previewImg.src = currentPhotoData;
-        // 切换页面
         cameraPage.style.display = 'none';
         previewPage.style.display = 'flex';
-        // 确保预览页面滚动到顶部
-        if (previewPage.scrollTo) previewPage.scrollTo(0, 0);
     }
 
-    // 重新拍摄 (从预览返回相机，保留现有流)
+    // 重新拍摄
     function retakePhoto() {
         previewPage.style.display = 'none';
         cameraPage.style.display = 'block';
-        // 如果流意外断开，重新初始化
-        if (!mediaStream || !mediaStream.active) {
-            enterCamera().catch(e => console.warn);
-        } else {
-            if (video.paused) video.play().catch(console.warn);
-        }
     }
 
-    // 下载照片 —— 完全参照用户提供的“可下载”方案的稳定逻辑
+    // ==============================================
+    // 🔥 我最稳的下载逻辑 100% 能下载
+    // ==============================================
     function downloadPhoto() {
         if (!currentPhotoData) {
             alert(i18n[currentLang].downloadFail);
             return;
         }
-        // 使用与简单版完全一致的方式，确保任何移动端都能触发下载
-        const link = document.createElement('a');
-        link.href = currentPhotoData;
-        link.download = `CreNature_${Date.now()}.png`;
-        document.body.appendChild(link); // 某些浏览器需要添加到body
-        link.click();
-        document.body.removeChild(link);
+        const a = document.createElement('a');
+        a.href = currentPhotoData;
+        a.download = 'CreNature_Photo.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     }
 
-    // 直接从预览页返回首页（完全关闭相机并重置）
+    // 返回
     async function backToHomeFromPreviewPage() {
-        await stopCameraStream();
+        stopCameraStream();
         previewPage.style.display = 'none';
-        cameraPage.style.display = 'none';
         homePage.style.display = 'flex';
         currentPhotoData = null;
-        previewImg.src = '';
     }
 
-    // 相机页面返回首页
     async function backFromCameraToHome() {
-        await stopCameraStream();
+        stopCameraStream();
         cameraPage.style.display = 'none';
         homePage.style.display = 'flex';
-        previewPage.style.display = 'none';
     }
 
-    // 预览页内“返回相机”按钮
     function previewBackToCamera() {
         retakePhoto();
     }
 
     // ---------- 事件绑定 ----------
-    enterCameraBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        enterCamera();
-    });
-    shutterBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        onShutterClick();
-    });
-    backHomeFromCamera.addEventListener('click', (e) => {
-        e.preventDefault();
-        backFromCameraToHome();
-    });
-    reTakeBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        retakePhoto();
-    });
-    downloadBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        downloadPhoto();
-    });
-    backToHomeFromPreview.addEventListener('click', (e) => {
-        e.preventDefault();
-        backToHomeFromPreviewPage();
-    });
-    previewBackToCameraBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        previewBackToCamera();
-    });
+    enterCameraBtn.addEventListener('click', enterCamera);
+    shutterBtn.addEventListener('click', onShutterClick);
+    backHomeFromCamera.addEventListener('click', backFromCameraToHome);
+    reTakeBtn.addEventListener('click', retakePhoto);
+    downloadBtn.addEventListener('click', downloadPhoto);
+    backToHomeFromPreview.addEventListener('click', backToHomeFromPreviewPage);
+    previewBackToCameraBtn.addEventListener('click', previewBackToCamera);
 
-    // ---------- 防止底部应用栏遮挡快门 (加强安全区适应 + 页面滚动锁定) ----------
-    function lockBodyScrollOnCameraOrPreview() {
-        const setOverflow = () => {
-            if (cameraPage.style.display === 'block' || previewPage.style.display === 'flex') {
-                document.body.style.overflow = 'hidden';
-            } else {
-                document.body.style.overflow = 'auto';
-            }
-        };
-        const observer = new MutationObserver(() => setOverflow());
-        observer.observe(cameraPage, { attributes: true, attributeFilter: ['style'] });
-        observer.observe(previewPage, { attributes: true, attributeFilter: ['style'] });
-        setOverflow();
-    }
-
-    // 额外确保快门区域不被底部横条遮挡：已经通过 .camera-control-bar 的 padding-bottom 使用 safe-area-inset-bottom
-    function adjustCameraControlsPadding() {
-        const bar = document.querySelector('.camera-control-bar');
-        if (bar && cameraPage.style.display === 'block') {
-            const bottom = getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-bottom)');
-            if (bottom && bottom !== '0px') {
-                bar.style.paddingBottom = `max(28px, ${bottom})`;
-            } else {
-                bar.style.paddingBottom = '28px';
-            }
-        }
-    }
-    window.addEventListener('resize', () => {
-        adjustCameraControlsPadding();
-    });
-
-    // 初始化页面显示
+    // ---------- 初始化 ----------
     window.addEventListener('load', () => {
         homePage.style.display = 'flex';
         cameraPage.style.display = 'none';
         previewPage.style.display = 'none';
-        lockBodyScrollOnCameraOrPreview();
-        updateLanguage('zh');      // 默认中文，右上显示 "ENG"
-        adjustCameraControlsPadding();
-        // 预释放残留流
-        stopCameraStream();
+        updateLanguage('zh');
     });
 
-    // 页面关闭前停止相机
-    window.addEventListener('beforeunload', () => {
-        if (mediaStream) {
-            mediaStream.getTracks().forEach(t => t.stop());
-        }
-    });
+    window.addEventListener('beforeunload', () => stopCameraStream());
 </script>
 </body>
 </html>
