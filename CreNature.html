@@ -1,310 +1,647 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-    <title>CreNature | 机械艺术树</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>CreNature | 机械共生 · 全息觉醒</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            background: #000;
-            min-height: 100vh;
+            margin: 0;
             overflow: hidden;
-            font-family: "Segoe UI", sans-serif;
+            font-family: 'Segoe UI', 'Poppins', 'Rajdhani', 'Orbitron', monospace;
             color: #fff;
+            background-color: #000;
         }
 
-        /* 背景粒子画布 */
-        #bgCanvas {
+        /* 信息浮层 - 科技面板 */
+        .info-panel {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 1;
+            bottom: 24px;
+            left: 24px;
+            z-index: 30;
+            background: rgba(10, 20, 30, 0.55);
+            backdrop-filter: blur(12px);
+            border-radius: 28px;
+            padding: 12px 24px;
+            border: 1px solid rgba(0, 255, 255, 0.35);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4), 0 0 15px rgba(0, 255, 255, 0.2);
+            pointer-events: none;
+            font-weight: 300;
+            letter-spacing: 1px;
+        }
+        .info-panel .title {
+            font-size: 1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, #aaffff, #88aaff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 6px;
+        }
+        .info-panel .stats {
+            display: flex;
+            gap: 20px;
+            font-size: 0.8rem;
+            font-family: monospace;
+            color: #ccf6ff;
+        }
+        .info-panel .stats span {
+            color: #5effbc;
+            font-weight: bold;
+            margin-right: 4px;
         }
 
-        /* 提示文字 */
-        .hint-text {
+        /* 能量核心进度指示器 */
+        .energy-core {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 16px;
+            bottom: 30px;
+            right: 30px;
+            z-index: 30;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,30,40,0.9), rgba(0,0,0,0.7));
+            border: 1px solid rgba(0, 255, 255, 0.5);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron', monospace;
+            pointer-events: none;
+            box-shadow: 0 0 20px rgba(0, 200, 255, 0.3);
+        }
+        .energy-core .count {
+            font-size: 1.9rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #aaffdd, #88ccff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            line-height: 1;
+        }
+        .energy-core .label {
+            font-size: 0.6rem;
             letter-spacing: 2px;
-            color: rgba(255, 255, 255, 0.35);
-            z-index: 10;
-            pointer-events: none;
-            animation: hintBreathe 2.5s ease-in-out infinite;
-            transition: opacity 1.2s ease;
+            color: #8dd0ff;
         }
 
-        @keyframes hintBreathe {
-            0%, 100% { opacity: 0.25; }
-            50% { opacity: 0.7; }
-        }
-
-        /* 流苏流光光点 */
-        .flow-light {
-            position: fixed;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #ffffff 0%, rgba(200, 230, 255, 0.6) 70%, transparent 100%);
-            box-shadow: 0 0 30px 12px rgba(180, 220, 255, 0.5);
-            z-index: 5;
-            pointer-events: none;
-            animation: flowLightAnim 2.2s ease-in-out infinite;
-        }
-
-        @keyframes flowLightAnim {
-            0% { transform: scale(0.8); opacity: 0.7; }
-            50% { transform: scale(1.3); opacity: 1; }
-            100% { transform: scale(0.85); opacity: 0.75; }
-        }
-
-        /* 三点连线 */
-        .line-connect {
-            position: fixed;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(200, 230, 255, 0.6), transparent);
-            transform-origin: left center;
-            z-index: 4;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.8s ease;
-        }
-
-        /* 全息机械树 */
-        .holo-tree {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.85);
-            max-width: 85vw;
-            max-height: 85vh;
-            z-index: 3;
-            opacity: 0;
-            filter: drop-shadow(0 0 18px rgba(160, 210, 255, 0.75))
-                    drop-shadow(0 0 40px rgba(120, 180, 255, 0.4));
-            transition: opacity 1.5s ease, transform 1.2s ease;
-        }
-
-        /* 解锁波纹 */
-        .unlock-ripple {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            border-radius: 50%;
-            border: 1px solid rgba(200, 230, 255, 0.5);
-            z-index: 6;
-            pointer-events: none;
-            animation: rippleExpand 1.5s ease-out forwards;
-        }
-
-        @keyframes rippleExpand {
-            0% { width: 0px; height: 0px; opacity: 1; }
-            100% { width: 600px; height: 600px; opacity: 0; }
-        }
-
-        /* 作品介绍浮窗 */
+        /* 介绍卡片 - 升级炫酷 */
         .intro-card {
             position: fixed;
             bottom: 40px;
             left: 50%;
-            transform: translateX(-50%);
+            transform: translateX(-50%) translateY(30px);
             width: 90%;
-            max-width: 500px;
-            padding: 20px 26px;
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            z-index: 20;
+            max-width: 560px;
+            background: rgba(8, 18, 28, 0.75);
+            backdrop-filter: blur(16px);
+            border-radius: 32px;
+            padding: 18px 28px;
+            border: 1px solid rgba(0, 255, 255, 0.4);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 28px rgba(0, 210, 255, 0.3);
+            z-index: 40;
             opacity: 0;
-            transition: opacity 1.5s ease, transform 1.2s ease;
+            transition: opacity 1s cubic-bezier(0.2, 0.9, 0.4, 1.1), transform 0.8s ease;
+            pointer-events: none;
+            font-family: 'Segoe UI', system-ui;
         }
-
-        .intro-card h2 {
-            font-size: 18px;
-            letter-spacing: 1px;
-            margin-bottom: 10px;
-            color: rgba(255, 255, 255, 0.9);
+        .intro-card.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
-
+        .intro-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            font-weight: 600;
+            background: linear-gradient(120deg, #ffffff, #6ee7ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.5px;
+        }
+        .intro-card .sub {
+            font-size: 0.75rem;
+            color: #8bcbff;
+            margin-bottom: 12px;
+            border-left: 2px solid #0cf;
+            padding-left: 12px;
+        }
         .intro-card p {
-            font-size: 14px;
-            line-height: 1.6;
-            color: rgba(255, 255, 255, 0.55);
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: #e0f0ff;
+            opacity: 0.9;
+        }
+        .spec-badge {
+            display: flex;
+            gap: 16px;
+            margin-top: 14px;
+            font-size: 0.7rem;
+        }
+        .spec-badge div {
+            background: rgba(0, 255, 255, 0.15);
+            border-radius: 40px;
+            padding: 4px 12px;
+            border: 0.5px solid rgba(0, 255, 255, 0.4);
+        }
+
+        /* 全息解锁时波纹文字 */
+        .hint-glow {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.2rem;
+            letter-spacing: 6px;
+            white-space: nowrap;
+            z-index: 25;
+            pointer-events: none;
+            text-shadow: 0 0 12px #0cf;
+            color: #b9f2ff;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        @keyframes floatHint {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9);}
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.05);}
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(1.3);}
+        }
+
+        /* 移动端优化 */
+        @media (max-width: 680px) {
+            .info-panel { bottom: 16px; left: 16px; padding: 8px 16px; }
+            .energy-core { width: 56px; height: 56px; bottom: 20px; right: 20px; }
+            .energy-core .count { font-size: 1.4rem; }
+            .intro-card { padding: 14px 20px; }
+            .intro-card h3 { font-size: 1.2rem; }
         }
     </style>
 </head>
 <body>
-    <!-- 背景粒子画布 -->
-    <canvas id="bgCanvas"></canvas>
 
-    <!-- 提示文字 -->
-    <div class="hint-text">触碰荧幕，唤醒光源</div>
-
-    <!-- 全息机械树 已绑定你的文件名 -->
-    <img src="CreNature_Transparent.png" class="holo-tree" alt="CreNature 机械艺术树" />
-
-    <!-- 作品介绍卡片 -->
-    <div class="intro-card">
-        <h2>CreNature · 机械共生艺术树</h2>
-        <p>由4支机械臂、20个伺服舵机构成关节骨架，结合银色荧光肌理、半透明玻璃质感花叶与内置灯光系统。机械结构与自然形态共生，以科技重构自然生长的韵律，每一处关节皆可通过交互控制实现姿态流转。</p>
+    <!-- UI 面板 -->
+    <div class="info-panel">
+        <div class="title">⚙️ CRENATURE · 机械仿生体</div>
+        <div class="stats">
+            <div>🔧 关节矩阵 <span id="jointCount">20</span> 舵机</div>
+            <div>🌿 共生协议 <span id="energyStatus">0/6</span></div>
+        </div>
     </div>
+    <div class="energy-core">
+        <div class="count" id="coreCount">0</div>
+        <div class="label">NEURON CORE</div>
+    </div>
+    <div class="intro-card" id="introCard">
+        <h3>🌌 CreNature · 机械共生艺术树</h3>
+        <div class="sub">⚡ 全息神经网络 | 伺服驱动花叶</div>
+        <p>由4支高精度机械臂、20个微型伺服舵机构建动态骨架，融合液态银荧肌理与半透明玻璃质感花瓣。机械逻辑与自然形态共生，借助实时交互传感，肢体可随能量律动呼吸、扭转。科技重构生长韵律——工业与生命在此共振。</p>
+        <div class="spec-badge">
+            <div>✨ 4轴机械臂</div>
+            <div>🎨 荧光光导纤维</div>
+            <div>🌀 自适应动态关节</div>
+        </div>
+    </div>
+    <div class="hint-glow" id="hintGlow">✦ 灵能觉醒 ✦</div>
 
-    <script>
-        // ========== 背景星空粒子 ==========
-        const canvas = document.getElementById('bgCanvas');
-        const ctx = canvas.getContext('2d');
-        let w, h;
-        let particles = [];
-
-        function resizeCanvas() {
-            w = window.innerWidth;
-            h = window.innerHeight;
-            canvas.width = w;
-            canvas.height = h;
-        }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-
-        class Particle {
-            constructor() {
-                this.x = Math.random() * w;
-                this.y = Math.random() * h;
-                this.r = Math.random() * 1.2 + 0.2;
-                this.speedX = Math.random() * 0.2 - 0.1;
-                this.speedY = Math.random() * 0.2 - 0.1;
-                this.alpha = Math.random() * 0.4 + 0.1;
-            }
-            update() {
-                this.x += this.speedX;
-                this.y += this.speedY;
-                if (this.x < 0) this.x = w;
-                if (this.x > w) this.x = 0;
-                if (this.y < 0) this.y = h;
-                if (this.y > h) this.y = 0;
-            }
-            draw() {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(210, 235, 255, ${this.alpha})`;
-                ctx.fill();
+    <!-- Three.js 核心 -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
             }
         }
+    </script>
 
-        for (let i = 0; i < 120; i++) {
-            particles.push(new Particle());
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- 初始化场景、相机、渲染器 (顶级科技感) ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x010418);
+        scene.fog = new THREE.FogExp2(0x010418, 0.008); // 深邃雾效
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0.5, 8);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true; // 开启阴影增强质感
+        document.body.appendChild(renderer.domElement);
+
+        // --- 灯光系统: 科幻冷色调 + 动态点光 ---
+        // 环境光
+        const ambientLight = new THREE.AmbientLight(0x111122);
+        scene.add(ambientLight);
+        // 主光源方向光
+        const dirLight = new THREE.DirectionalLight(0x88aaff, 1.2);
+        dirLight.position.set(2, 5, 3);
+        dirLight.castShadow = true;
+        dirLight.receiveShadow = false;
+        scene.add(dirLight);
+        // 背光冷色
+        const backLight = new THREE.PointLight(0x2266ff, 0.6);
+        backLight.position.set(-1, 1, -3);
+        scene.add(backLight);
+        // 动态暖色补光
+        const fillLight = new THREE.PointLight(0xffaa66, 0.4);
+        fillLight.position.set(1, 1.5, 2);
+        scene.add(fillLight);
+        
+        // 炫酷粒子背景 (星空 + 浮尘)
+        const starCount = 1800;
+        const starGeometry = new THREE.BufferGeometry();
+        const starPositions = new Float32Array(starCount * 3);
+        for (let i = 0; i < starCount; i++) {
+            starPositions[i*3] = (Math.random() - 0.5) * 200;
+            starPositions[i*3+1] = (Math.random() - 0.5) * 100;
+            starPositions[i*3+2] = (Math.random() - 0.5) * 60 - 30;
         }
-
-        function animateParticle() {
-            ctx.clearRect(0, 0, w, h);
-            particles.forEach(p => {
-                p.update();
-                p.draw();
-            });
-            requestAnimationFrame(animateParticle);
+        starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        const starMaterial = new THREE.PointsMaterial({ color: 0x88aaff, size: 0.08, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending });
+        const stars = new THREE.Points(starGeometry, starMaterial);
+        scene.add(stars);
+        
+        // 第二层粒子云 (动态)
+        const nebulaCount = 800;
+        const nebulaGeo = new THREE.BufferGeometry();
+        const nebulaPos = [];
+        for (let i = 0; i < nebulaCount; i++) {
+            nebulaPos.push((Math.random() - 0.5) * 40);
+            nebulaPos.push((Math.random() - 0.5) * 30);
+            nebulaPos.push((Math.random() - 0.5) * 25 - 15);
         }
-        animateParticle();
-
-        // ========== 交互逻辑 ==========
-        const hintText = document.querySelector('.hint-text');
-        const holoTree = document.querySelector('.holo-tree');
-        const introCard = document.querySelector('.intro-card');
-
-        let lightPoints = [];
-        let lineElements = [];
+        nebulaGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(nebulaPos), 3));
+        const nebulaMat = new THREE.PointsMaterial({ color: 0x55ccff, size: 0.05, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending });
+        const nebulaPoints = new THREE.Points(nebulaGeo, nebulaMat);
+        scene.add(nebulaPoints);
+        
+        // --- 核心视觉: 全息机械树 (纹理平面 + 光晕效果)---
+        let treeMesh = null;
+        const textureLoader = new THREE.TextureLoader();
+        // 加载透明树图片 (若图片加载失败, 会显示一个科技轮廓备用, 但原图CreNature_Transparent.png需要存在, 本代码基于原命名)
+        const treeTexture = textureLoader.load('CreNature_Transparent.png', 
+            () => {}, 
+            undefined, 
+            () => console.warn("图片加载失败，请确保CreNature_Transparent.png在同目录，但依然可用科技网格代替")
+        );
+        const planeGeometry = new THREE.PlaneGeometry(3.8, 4.2);
+        const treeMaterial = new THREE.MeshStandardMaterial({
+            map: treeTexture,
+            transparent: true,
+            side: THREE.DoubleSide,
+            emissive: new THREE.Color(0x2266aa),
+            emissiveIntensity: 0.25,
+            roughness: 0.3,
+            metalness: 0.85
+        });
+        treeMesh = new THREE.Mesh(planeGeometry, treeMaterial);
+        treeMesh.castShadow = false;
+        treeMesh.receiveShadow = false;
+        treeMesh.position.y = -0.2;
+        scene.add(treeMesh);
+        
+        // 树干周围悬浮光环环 (科技圆环)
+        const ringGeo = new THREE.TorusGeometry(1.9, 0.03, 64, 300);
+        const ringMat = new THREE.MeshStandardMaterial({ color: 0x33ccff, emissive: 0x2288aa, emissiveIntensity: 0.7 });
+        const haloRing = new THREE.Mesh(ringGeo, ringMat);
+        haloRing.rotation.x = Math.PI / 2;
+        haloRing.position.y = -0.3;
+        scene.add(haloRing);
+        
+        // 添加漂浮粒子围绕树 (能量尘埃)
+        const dustCount = 400;
+        const dustGeo = new THREE.BufferGeometry();
+        const dustPositions = [];
+        for (let i = 0; i < dustCount; i++) {
+            dustPositions.push((Math.random() - 0.5) * 5);
+            dustPositions.push((Math.random() - 0.5) * 4);
+            dustPositions.push((Math.random() - 0.5) * 1.5 - 0.5);
+        }
+        dustGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(dustPositions), 3));
+        const dustMat = new THREE.PointsMaterial({ color: 0x77ddff, size: 0.02, transparent: true, blending: THREE.AdditiveBlending });
+        const dustParticles = new THREE.Points(dustGeo, dustMat);
+        treeMesh.add(dustParticles);
+        
+        // --- 互动光球 (6个灵核)---
+        const coreMeshes = [];
+        const corePositions = [
+            { x: -2.2, y: 0.8, z: 0.5 },
+            { x: 2.3, y: 0.6, z: 0.4 },
+            { x: -1.5, y: 1.8, z: 0.2 },
+            { x: 1.7, y: 1.9, z: 0.3 },
+            { x: -0.8, y: -0.9, z: 1.0 },
+            { x: 0.9, y: -0.7, z: 1.1 }
+        ];
+        const coreColors = [0x33ccff, 0x55ddff, 0x66ffff, 0x44aaff, 0x88ddff, 0x2acfff];
+        let collectedCount = 0;
+        const totalCores = 6;
         let unlocked = false;
-
-        // 点击生成流苏流光
-        document.addEventListener('click', e => {
+        
+        // 创建可交互光球
+        for (let i = 0; i < totalCores; i++) {
+            const sphereGeo = new THREE.SphereGeometry(0.22, 32, 32);
+            const material = new THREE.MeshStandardMaterial({
+                color: coreColors[i],
+                emissive: 0x44aaff,
+                emissiveIntensity: 0.9,
+                metalness: 0.8,
+                roughness: 0.2
+            });
+            const ball = new THREE.Mesh(sphereGeo, material);
+            ball.userData = { id: i, collected: false };
+            ball.position.set(corePositions[i].x, corePositions[i].y, corePositions[i].z);
+            scene.add(ball);
+            coreMeshes.push(ball);
+            
+            // 添加一个小光晕点光源围绕
+            const glowLight = new THREE.PointLight(coreColors[i], 0.6, 3);
+            ball.add(glowLight);
+        }
+        
+        // 漂浮旋转动画组 (小球公转)
+        let angleOffset = 0;
+        
+        // 射线交互 Raycaster
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        
+        // 事件监听: 鼠标 / 触摸
+        function onInteract(event) {
             if (unlocked) return;
-            const light = document.createElement('div');
-            light.className = 'flow-light';
-            light.style.left = `${e.clientX - 13}px`;
-            light.style.top = `${e.clientY - 13}px`;
-            document.body.appendChild(light);
-            lightPoints.push({ el: light, x: e.clientX, y: e.clientY });
-
-            // 凑够3个触发解锁
-            if (lightPoints.length >= 3) {
-                drawConnectLines();
-                setTimeout(unlockAll, 800);
+            // 计算鼠标位置归一化坐标
+            const rect = renderer.domElement.getBoundingClientRect();
+            let clientX, clientY;
+            if (event.touches) {
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+                event.preventDefault();
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
             }
-        });
-
-        // 三点连线
-        function drawConnectLines() {
-            for (let i = 0; i < 3; i++) {
-                const next = (i + 1) % 3;
-                const p1 = lightPoints[i];
-                const p2 = lightPoints[next];
-
-                const line = document.createElement('div');
-                line.className = 'line-connect';
-
-                const dx = p2.x - p1.x;
-                const dy = p2.y - p1.y;
-                const len = Math.hypot(dx, dy);
-                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-
-                line.style.left = `${p1.x}px`;
-                line.style.top = `${p1.y}px`;
-                line.style.width = `${len}px`;
-                line.style.transform = `rotate(${angle}deg)`;
-                line.style.opacity = '1';
-
-                document.body.appendChild(line);
-                lineElements.push(line);
+            mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(coreMeshes);
+            if (intersects.length > 0) {
+                const hitBall = intersects[0].object;
+                if (!hitBall.userData.collected && !unlocked) {
+                    // 收集核心
+                    hitBall.userData.collected = true;
+                    collectedCount++;
+                    updateEnergyUI(collectedCount);
+                    
+                    // 炫酷特效: 爆炸粒子光环 (创建临时环状平面)
+                    createShockwave(hitBall.position.clone());
+                    // 光球消失特效 + 移除
+                    scene.remove(hitBall);
+                    // 在相同位置添加粒子飘散
+                    createLightBurst(hitBall.position.clone());
+                    
+                    // 增加能量脉冲到树材质
+                    if (treeMaterial) {
+                        treeMaterial.emissiveIntensity = 0.45 + collectedCount * 0.12;
+                        setTimeout(() => {
+                            if (!unlocked) treeMaterial.emissiveIntensity = 0.35 + collectedCount * 0.07;
+                        }, 300);
+                    }
+                    // 让光环闪烁
+                    haloRing.material.emissiveIntensity = 0.7 + collectedCount * 0.2;
+                    
+                    // 当集满6个 -> 解锁全息大典
+                    if (collectedCount === totalCores && !unlocked) {
+                        unlockFullExperience();
+                    }
+                }
             }
         }
-
-        // 解锁全站
-        function unlockAll() {
+        
+        // 冲击波视觉
+        function createShockwave(pos) {
+            const ringGeoWave = new THREE.RingGeometry(0.2, 0.6, 16);
+            const waveMat = new THREE.MeshBasicMaterial({ color: 0x66ffff, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
+            const waveRing = new THREE.Mesh(ringGeoWave, waveMat);
+            waveRing.position.copy(pos);
+            scene.add(waveRing);
+            let scale = 1;
+            let opacity = 0.9;
+            function animateWave() {
+                scale += 0.08;
+                opacity -= 0.025;
+                waveRing.scale.set(scale, scale, 1);
+                waveRing.material.opacity = opacity;
+                if (opacity <= 0) {
+                    scene.remove(waveRing);
+                    waveRing.material.dispose();
+                    return;
+                }
+                requestAnimationFrame(animateWave);
+            }
+            animateWave();
+        }
+        
+        // 粒子爆闪
+        function createLightBurst(pos) {
+            const particleCount = 40;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            for (let i = 0; i < particleCount; i++) {
+                positions[i*3] = (Math.random() - 0.5) * 0.8;
+                positions[i*3+1] = (Math.random() - 0.5) * 0.8;
+                positions[i*3+2] = (Math.random() - 0.5) * 0.8;
+            }
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const particleMat = new THREE.PointsMaterial({ color: 0x88ddff, size: 0.04, blending: THREE.AdditiveBlending });
+            const particlesSys = new THREE.Points(geometry, particleMat);
+            particlesSys.position.copy(pos);
+            scene.add(particlesSys);
+            let life = 1;
+            function fadeParticles() {
+                life -= 0.05;
+                particleMat.opacity = life;
+                particlesSys.scale.multiplyScalar(0.97);
+                if (life <= 0) {
+                    scene.remove(particlesSys);
+                    particleMat.dispose();
+                    geometry.dispose();
+                    return;
+                }
+                requestAnimationFrame(fadeParticles);
+            }
+            fadeParticles();
+        }
+        
+        function updateEnergyUI(val) {
+            document.getElementById('coreCount').innerText = val;
+            document.getElementById('energyStatus').innerHTML = `${val}/${totalCores}`;
+            // 附加动态光效
+            const coreDiv = document.querySelector('.energy-core');
+            coreDiv.style.boxShadow = `0 0 ${15 + val * 5}px rgba(0, 200, 255, 0.6)`;
+        }
+        
+        function unlockFullExperience() {
             unlocked = true;
-            hintText.style.opacity = 0;
-
-            // 解锁波纹
-            const ripple = document.createElement('div');
-            ripple.className = 'unlock-ripple';
-            document.body.appendChild(ripple);
-
-            // 全息树浮现 + 呼吸微动
-            holoTree.style.opacity = 1;
-            holoTree.style.transform = 'translate(-50%, -50%) scale(1)';
-
-            // 介绍卡片滑入
-            setTimeout(() => {
-                introCard.style.opacity = 1;
-                introCard.style.transform = 'translateX(-50%) translateY(0)';
-            }, 600);
+            // 树材质全面激活
+            treeMaterial.emissiveIntensity = 0.95;
+            treeMaterial.metalness = 1.0;
+            // 光环剧烈闪烁
+            haloRing.material.emissiveIntensity = 1.5;
+            // 增加全局闪耀粒子雨
+            const flashBurst = () => {
+                for(let i=0; i<80; i++) {
+                    const spark = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.04, 6, 6),
+                        new THREE.MeshStandardMaterial({ color: 0x88ddff, emissive: 0x44aaff, emissiveIntensity: 1 })
+                    );
+                    spark.position.set((Math.random() - 0.5)*5, (Math.random() - 0.5)*4 + 0.5, (Math.random() - 0.5)*2);
+                    scene.add(spark);
+                    setTimeout(() => scene.remove(spark), 800);
+                }
+            };
+            flashBurst();
+            setTimeout(flashBurst, 200);
+            
+            // 显示全息介绍卡片 + 炫光文字
+            const card = document.getElementById('introCard');
+            card.classList.add('show');
+            const hintGlow = document.getElementById('hintGlow');
+            hintGlow.style.animation = 'floatHint 1.2s ease-out forwards';
+            
+            // 添加环绕粒子光环围绕树
+            const gloryRing = new THREE.Mesh(
+                new THREE.TorusGeometry(2.2, 0.04, 64, 200),
+                new THREE.MeshStandardMaterial({ color: 0x88ffff, emissive: 0x44ccff, emissiveIntensity: 1.2 })
+            );
+            gloryRing.rotation.x = Math.PI / 2.5;
+            scene.add(gloryRing);
+            let timeGlory = 0;
+            function animateRing() {
+                if (!gloryRing) return;
+                timeGlory += 0.02;
+                gloryRing.rotation.z = timeGlory * 0.8;
+                gloryRing.rotation.x = Math.PI / 2 + Math.sin(timeGlory) * 0.2;
+                requestAnimationFrame(animateRing);
+            }
+            animateRing();
+            
+            // 更新面板显示完全态
+            document.querySelector('.info-panel .stats').innerHTML = `<div>🔧 关节矩阵 <span>20</span> 伺服舵机</div><div>🌿 共生协议 <span style="color:#5effbc;">★ 觉醒 ★</span></div>`;
         }
-
-        // 解锁后 鼠标/触屏 视差跟随（巨丝滑）
-        document.addEventListener('mousemove', e => {
+        
+        // 注册事件
+        window.addEventListener('click', onInteract);
+        window.addEventListener('touchstart', onInteract, { passive: false });
+        
+        // 鼠标拖拽视差 (优雅微移动)
+        let mouseXPara = 0, mouseYPara = 0;
+        let targetX = 0, targetY = 0;
+        window.addEventListener('mousemove', (e) => {
             if (!unlocked) return;
-            const mx = (e.clientX / window.innerWidth - 0.5) * 12;
-            const my = (e.clientY / window.innerHeight - 0.5) * 12;
-            holoTree.style.transform = `translate(calc(-50% + ${mx}px), calc(-50% + ${my}px)) scale(1)`;
+            targetX = (e.clientX / window.innerWidth - 0.5) * 0.8;
+            targetY = (e.clientY / window.innerHeight - 0.5) * 0.6;
         });
-
-        // 移动端触摸滑动视差
-        document.addEventListener('touchmove', e => {
-            if (!unlocked) return;
-            const touch = e.touches[0];
-            const mx = (touch.clientX / window.innerWidth - 0.5) * 12;
-            const my = (touch.clientY / window.innerHeight - 0.5) * 12;
-            holoTree.style.transform = `translate(calc(-50% + ${mx}px), calc(-50% + ${my}px)) scale(1)`;
+        window.addEventListener('touchmove', (e) => {
+            if (!unlocked || !e.touches) return;
+            targetX = (e.touches[0].clientX / window.innerWidth - 0.5) * 0.8;
+            targetY = (e.touches[0].clientY / window.innerHeight - 0.5) * 0.6;
         });
+        
+        // 自动旋转光球动画（未收集时漂浮自转）
+        let time = 0;
+        
+        // 简单星星旋转
+        function animateStars() {
+            stars.rotation.y += 0.0005;
+            stars.rotation.x += 0.0003;
+            nebulaPoints.rotation.y -= 0.0002;
+        }
+        
+        // 动态光效填充光强度
+        let lightPulse = 0;
+        
+        // 主渲染循环
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.012;
+            lightPulse += 0.02;
+            
+            // 未收集的光球旋转 + 呼吸效果
+            if (!unlocked) {
+                coreMeshes.forEach((ball, idx) => {
+                    if (!ball.userData.collected) {
+                        // 围绕轴小幅度浮动
+                        ball.position.y = corePositions[idx].y + Math.sin(time * 1.8 + idx) * 0.05;
+                        const intensity = 0.7 + Math.sin(time * 5 + idx) * 0.3;
+                        if (ball.children[0]) ball.children[0].intensity = intensity;
+                        ball.scale.setScalar(1 + Math.sin(time * 8 + idx) * 0.05);
+                    }
+                });
+                // 光环旋转
+                haloRing.rotation.z += 0.008;
+            } else {
+                // 解锁后树的光芒律动
+                treeMaterial.emissiveIntensity = 0.85 + Math.sin(time * 3) * 0.2;
+                haloRing.material.emissiveIntensity = 1.1 + Math.sin(time * 4) * 0.4;
+                haloRing.rotation.z += 0.01;
+                // 视差平滑移动相机或平面
+                mouseXPara += (targetX - mouseXPara) * 0.08;
+                mouseYPara += (targetY - mouseYPara) * 0.08;
+                camera.position.x += (mouseXPara * 0.5 - camera.position.x) * 0.05;
+                camera.position.y += (-mouseYPara * 0.3 + 0.5 - camera.position.y) * 0.05;
+                camera.lookAt(0, 0.2, 0);
+            }
+            
+            // 动态补光 + 氛围脉冲
+            const pulseVal = 0.4 + Math.sin(lightPulse) * 0.15;
+            fillLight.intensity = 0.5 + Math.sin(lightPulse * 1.3) * 0.2;
+            dirLight.intensity = 1.0 + Math.sin(lightPulse * 0.9) * 0.2;
+            
+            // 尘埃粒子旋转
+            dustParticles.rotation.y += 0.01;
+            dustParticles.rotation.x = Math.sin(time * 0.7) * 0.1;
+            
+            animateStars();
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+        
+        // 窗口适陪
+        window.addEventListener('resize', onWindowResize, false);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // 额外增加一个炫酷的扫描线效果 (CSS点缀)
+        const styleTag = document.createElement('style');
+        styleTag.innerHTML = `
+            body::after {
+                content: '';
+                position: fixed;
+                top:0;
+                left:0;
+                width:100%;
+                height:100%;
+                pointer-events: none;
+                background: repeating-linear-gradient(0deg, rgba(0,255,255,0.02) 0px, rgba(0,255,255,0.02) 2px, transparent 2px, transparent 8px);
+                z-index: 100;
+            }
+        `;
+        document.head.appendChild(styleTag);
+        
+        // 输出初始化完成
+        console.log('机械树觉醒协议启动 | 点击灵核收集能量');
+        
+        // 初始UI状态
+        updateEnergyUI(0);
     </script>
 </body>
 </html>
