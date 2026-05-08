@@ -56,14 +56,12 @@
             opacity: 0.35;
         }
 
-        /* 相机页面 - 修复底部遮挡，加安全边距 */
+        /* 相机页面 */
         .camera-wrap {
             width: 100vw;
             height: 100vh;
             display: none;
             position: relative;
-            /* 给底部预留安全边距，避开手机导航栏 */
-            padding-bottom: env(safe-area-inset-bottom, 0);
         }
         video {
             width: 100%;
@@ -83,8 +81,8 @@
         }
         .shutter-btn {
             position: absolute;
-            /* 按钮上移，避开底部导航栏 */
-            bottom: max(60px, env(safe-area-inset-bottom) + 20px);
+            bottom: 0;
+            margin-bottom: 80px; /* 你要的：底部 margin 上移 */
             left: 50%;
             transform: translateX(-50%);
             width: 70px;
@@ -93,27 +91,15 @@
             border: 2px solid rgba(255,255,255,0.4);
             background: rgba(255,255,255,0.1);
         }
-        .confirm-shot-btn {
-            position: absolute;
-            bottom: max(140px, env(safe-area-inset-bottom) + 100px);
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 10px 20px;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.35);
-            background: rgba(0,0,0,0.25);
-            color: #fff;
-            display: none;
-        }
 
-        /* 预览照片页面 */
+        /* 预览照片页面 —— 图片顶部增加间距，不贴顶 */
         .preview-wrap {
             width: 100vw;
             height: 100vh;
             display: none;
             flex-direction: column;
             align-items: center;
-            padding-top: max(60px, env(safe-area-inset-top) + 20px);
+            padding-top: 120px; /* 增加顶部间距 */
             padding-bottom: max(20px, env(safe-area-inset-bottom));
             gap: 40px;
         }
@@ -150,7 +136,6 @@
     <video id="video" autoplay playsinline muted></video>
     <button class="back-btn" id="backHomeBtn">Back</button>
     <button class="shutter-btn" id="shutterBtn"></button>
-    <button class="confirm-shot-btn" id="confirmShotBtn">Confirm This Photo</button>
 </div>
 
 <!-- 照片预览页面 -->
@@ -173,7 +158,6 @@ const i18n = {
         introBtn: "Project Introduction (Coming Soon)",
         enterCameraBtn: "Enter Camera Mode",
         backBtn: "Back",
-        confirmShotBtn: "Confirm This Photo",
         reTakeBtn: "Retake Photo",
         downloadBtn: "Download Photo",
         alertPermission: "Please allow camera permission and open with HTTPS/localhost"
@@ -182,14 +166,13 @@ const i18n = {
         introBtn: "项目简介模式（暂未开放）",
         enterCameraBtn: "进入拍照模式",
         backBtn: "返回",
-        confirmShotBtn: "确认满意这张照片",
         reTakeBtn: "重新拍照",
         downloadBtn: "下载照片",
         alertPermission: "请允许摄像头权限，并使用HTTPS/localhost打开"
     }
 };
 
-let currentLang = "en"; // 默认英文
+let currentLang = "en";
 
 // 页面元素
 const homePage = document.getElementById('homePage');
@@ -200,7 +183,6 @@ const introBtn = document.getElementById('introBtn');
 const enterCameraBtn = document.getElementById('enterCameraBtn');
 const backHomeBtn = document.getElementById('backHomeBtn');
 const shutterBtn = document.getElementById('shutterBtn');
-const confirmShotBtn = document.getElementById('confirmShotBtn');
 
 const reTakeBtn = document.getElementById('reTakeBtn');
 const downloadBtn = document.getElementById('downloadBtn');
@@ -216,7 +198,7 @@ const previewImg = document.getElementById('previewImg');
 let mediaStream = null;
 let captureUrl = '';
 
-// 语言切换函数
+// 语言切换
 function updateLanguage(lang) {
     currentLang = lang;
     const texts = i18n[lang];
@@ -224,45 +206,41 @@ function updateLanguage(lang) {
     introBtn.textContent = texts.introBtn;
     enterCameraBtn.textContent = texts.enterCameraBtn;
     backHomeBtn.textContent = texts.backBtn;
-    confirmShotBtn.textContent = texts.confirmShotBtn;
     reTakeBtn.textContent = texts.reTakeBtn;
     downloadBtn.textContent = texts.downloadBtn;
     backFromPreviewBtn.textContent = texts.backBtn;
 }
 
-// 绑定语言切换事件
 langToggleBtn.addEventListener('click', () => {
-    const newLang = currentLang === "en" ? "zh" : "en";
-    updateLanguage(newLang);
+    updateLanguage(currentLang === "en" ? "zh" : "en");
 });
 
-// 进入相机
+// 进入相机 —— 强制最高像素
 enterCameraBtn.addEventListener('click', async () => {
     try {
         mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment' },
+            video: {
+                facingMode: 'environment',
+                width: { ideal: 3840 },
+                height: { ideal: 2160 }
+            },
             audio: false
         });
         video.srcObject = mediaStream;
         homePage.style.display = 'none';
         cameraPage.style.display = 'block';
-        confirmShotBtn.style.display = 'none';
     } catch (err) {
         alert(i18n[currentLang].alertPermission);
     }
 });
 
-// 快门拍照（修复：定格画面，留在相机页）
+// 快门 → 直接跳转预览（无二次确认）
 shutterBtn.addEventListener('click', () => {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
     captureUrl = canvas.toDataURL('image/png');
-    confirmShotBtn.style.display = 'block';
-});
 
-// 确认照片 进入预览页
-confirmShotBtn.addEventListener('click', () => {
     previewImg.src = captureUrl;
     cameraPage.style.display = 'none';
     previewPage.style.display = 'flex';
@@ -272,10 +250,9 @@ confirmShotBtn.addEventListener('click', () => {
 reTakeBtn.addEventListener('click', () => {
     previewPage.style.display = 'none';
     cameraPage.style.display = 'block';
-    confirmShotBtn.style.display = 'none';
 });
 
-// 下载照片（纯前端直接下载，不存后台）
+// 下载
 downloadBtn.addEventListener('click', () => {
     const a = document.createElement('a');
     a.href = captureUrl;
@@ -283,7 +260,7 @@ downloadBtn.addEventListener('click', () => {
     a.click();
 });
 
-// 相机页返回首页
+// 返回
 backHomeBtn.addEventListener('click', () => {
     if (mediaStream) {
         mediaStream.getTracks().forEach(track => track.stop());
@@ -293,7 +270,6 @@ backHomeBtn.addEventListener('click', () => {
     homePage.style.display = 'flex';
 });
 
-// 预览页返回
 backFromPreviewBtn.addEventListener('click', () => {
     previewPage.style.display = 'none';
     homePage.style.display = 'flex';
@@ -302,7 +278,9 @@ backFromPreviewBtn.addEventListener('click', () => {
         mediaStream = null;
     }
 });
-</script>
 
+// 初始语言
+updateLanguage('en');
+</script>
 </body>
 </html>
