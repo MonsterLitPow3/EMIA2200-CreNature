@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -17,10 +17,11 @@
             min-height: 100vh;
             overflow: hidden;
         }
-        /* 通用设置按钮 全局右上角 */
-        .setting-btn {
+
+        /* 语言切换按钮（全局右上角） */
+        .lang-btn {
             position: fixed;
-            top: 30px;
+            top: max(30px, env(safe-area-inset-top) + 10px);
             right: 20px;
             padding: 6px 12px;
             border: 1px solid rgba(255,255,255,0.25);
@@ -30,6 +31,7 @@
             font-size: 14px;
             z-index: 999;
         }
+
         /* 首页 */
         .home-wrap {
             width: 100vw;
@@ -53,12 +55,15 @@
         .btn:disabled {
             opacity: 0.35;
         }
-        /* 相机页面 */
+
+        /* 相机页面 - 修复底部遮挡，加安全边距 */
         .camera-wrap {
             width: 100vw;
             height: 100vh;
             display: none;
             position: relative;
+            /* 给底部预留安全边距，避开手机导航栏 */
+            padding-bottom: env(safe-area-inset-bottom, 0);
         }
         video {
             width: 100%;
@@ -67,7 +72,7 @@
         }
         .back-btn {
             position: absolute;
-            top: 30px;
+            top: max(30px, env(safe-area-inset-top) + 10px);
             left: 20px;
             padding: 6px 16px;
             border: 1px solid rgba(255,255,255,0.3);
@@ -78,7 +83,8 @@
         }
         .shutter-btn {
             position: absolute;
-            bottom: 60px;
+            /* 按钮上移，避开底部导航栏 */
+            bottom: max(60px, env(safe-area-inset-bottom) + 20px);
             left: 50%;
             transform: translateX(-50%);
             width: 70px;
@@ -89,7 +95,7 @@
         }
         .confirm-shot-btn {
             position: absolute;
-            bottom: 140px;
+            bottom: max(140px, env(safe-area-inset-bottom) + 100px);
             left: 50%;
             transform: translateX(-50%);
             padding: 10px 20px;
@@ -99,6 +105,7 @@
             color: #fff;
             display: none;
         }
+
         /* 预览照片页面 */
         .preview-wrap {
             width: 100vw;
@@ -106,7 +113,8 @@
             display: none;
             flex-direction: column;
             align-items: center;
-            padding-top: 60px;
+            padding-top: max(60px, env(safe-area-inset-top) + 20px);
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
             gap: 40px;
         }
         .preview-img {
@@ -119,7 +127,8 @@
             flex-direction: column;
             gap: 20px;
         }
-        /* 隐藏画布 用来抓拍 */
+
+        /* 隐藏抓拍画布 */
         #captureCanvas {
             display: none;
         }
@@ -127,42 +136,67 @@
 </head>
 <body>
 
-<!-- 全局右上角设置按钮 -->
-<button class="setting-btn">設定</button>
+<!-- 全局语言切换按钮 -->
+<button class="lang-btn" id="langToggleBtn">ENG</button>
 
 <!-- 首页 -->
 <div class="home-wrap" id="homePage">
-    <button class="btn" disabled>项目简介模式（暂未开放）</button>
-    <button class="btn" id="enterCameraBtn">进入拍照模式</button>
+    <button class="btn" id="introBtn" disabled>Project Introduction (Coming Soon)</button>
+    <button class="btn" id="enterCameraBtn">Enter Camera Mode</button>
 </div>
 
 <!-- 相机页面 -->
 <div class="camera-wrap" id="cameraPage">
     <video id="video" autoplay playsinline muted></video>
-    <button class="back-btn" id="backHomeBtn">返回</button>
+    <button class="back-btn" id="backHomeBtn">Back</button>
     <button class="shutter-btn" id="shutterBtn"></button>
-    <button class="confirm-shot-btn" id="confirmShotBtn">确认满意这张照片</button>
+    <button class="confirm-shot-btn" id="confirmShotBtn">Confirm This Photo</button>
 </div>
 
 <!-- 照片预览页面 -->
 <div class="preview-wrap" id="previewPage">
-    <img class="preview-img" id="previewImg" alt="预览照片">
+    <img class="preview-img" id="previewImg" alt="Preview Photo">
     <div class="preview-buttons">
-        <button class="btn" id="reTakeBtn">重新拍照</button>
-        <button class="btn" id="downloadBtn">下载照片</button>
+        <button class="btn" id="reTakeBtn">Retake Photo</button>
+        <button class="btn" id="downloadBtn">Download Photo</button>
     </div>
-    <button class="back-btn" id="backFromPreviewBtn">返回</button>
+    <button class="back-btn" id="backFromPreviewBtn">Back</button>
 </div>
 
 <!-- 隐藏抓拍画布 -->
 <canvas id="captureCanvas"></canvas>
 
 <script>
+// 多语言文本配置
+const i18n = {
+    en: {
+        introBtn: "Project Introduction (Coming Soon)",
+        enterCameraBtn: "Enter Camera Mode",
+        backBtn: "Back",
+        confirmShotBtn: "Confirm This Photo",
+        reTakeBtn: "Retake Photo",
+        downloadBtn: "Download Photo",
+        alertPermission: "Please allow camera permission and open with HTTPS/localhost"
+    },
+    zh: {
+        introBtn: "项目简介模式（暂未开放）",
+        enterCameraBtn: "进入拍照模式",
+        backBtn: "返回",
+        confirmShotBtn: "确认满意这张照片",
+        reTakeBtn: "重新拍照",
+        downloadBtn: "下载照片",
+        alertPermission: "请允许摄像头权限，并使用HTTPS/localhost打开"
+    }
+};
+
+let currentLang = "en"; // 默认英文
+
 // 页面元素
 const homePage = document.getElementById('homePage');
 const cameraPage = document.getElementById('cameraPage');
 const previewPage = document.getElementById('previewPage');
 
+const introBtn = document.getElementById('introBtn');
 const enterCameraBtn = document.getElementById('enterCameraBtn');
 const backHomeBtn = document.getElementById('backHomeBtn');
 const shutterBtn = document.getElementById('shutterBtn');
@@ -172,6 +206,8 @@ const reTakeBtn = document.getElementById('reTakeBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 const backFromPreviewBtn = document.getElementById('backFromPreviewBtn');
 
+const langToggleBtn = document.getElementById('langToggleBtn');
+
 const video = document.getElementById('video');
 const canvas = document.getElementById('captureCanvas');
 const ctx = canvas.getContext('2d');
@@ -179,6 +215,26 @@ const previewImg = document.getElementById('previewImg');
 
 let mediaStream = null;
 let captureUrl = '';
+
+// 语言切换函数
+function updateLanguage(lang) {
+    currentLang = lang;
+    const texts = i18n[lang];
+    langToggleBtn.textContent = lang === "en" ? "中" : "ENG";
+    introBtn.textContent = texts.introBtn;
+    enterCameraBtn.textContent = texts.enterCameraBtn;
+    backHomeBtn.textContent = texts.backBtn;
+    confirmShotBtn.textContent = texts.confirmShotBtn;
+    reTakeBtn.textContent = texts.reTakeBtn;
+    downloadBtn.textContent = texts.downloadBtn;
+    backFromPreviewBtn.textContent = texts.backBtn;
+}
+
+// 绑定语言切换事件
+langToggleBtn.addEventListener('click', () => {
+    const newLang = currentLang === "en" ? "zh" : "en";
+    updateLanguage(newLang);
+});
 
 // 进入相机
 enterCameraBtn.addEventListener('click', async () => {
@@ -192,11 +248,11 @@ enterCameraBtn.addEventListener('click', async () => {
         cameraPage.style.display = 'block';
         confirmShotBtn.style.display = 'none';
     } catch (err) {
-        alert('请允许摄像头权限，并使用HTTPS/localhost打开');
+        alert(i18n[currentLang].alertPermission);
     }
 });
 
-// 快门拍照
+// 快门拍照（修复：定格画面，留在相机页）
 shutterBtn.addEventListener('click', () => {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
