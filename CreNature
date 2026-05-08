@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机械树 | 全息唤醒</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #000;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+        }
+        .hint {
+            position: absolute;
+            color: rgba(255,255,255,0.5);
+            font-size: 16px;
+            animation: breathe 2s infinite ease-in-out;
+            transition: opacity 1s;
+        }
+        @keyframes breathe {
+            0%,100% { opacity: 0.3; }
+            50% { opacity: 0.7; }
+        }
+        .light-source {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.8);
+            box-shadow: 0 0 20px 10px rgba(255,255,255,0.5);
+            pointer-events: none;
+            animation: lightBreathe 1.5s infinite ease-in-out;
+        }
+        @keyframes lightBreathe {
+            0%,100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
+        .holo-tree {
+            position: absolute;
+            max-width: 80vw;
+            max-height: 80vh;
+            opacity: 0;
+            filter: drop-shadow(0 0 10px rgba(100,200,255,0.8));
+            transition: opacity 1s ease, transform 0.2s ease;
+        }
+        .scanline {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+            animation: scan 3s infinite linear;
+            opacity: 0;
+        }
+        @keyframes scan {
+            0% { top: 0; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.5);
+            pointer-events: none;
+            animation: rippleExpand 1s forwards ease-out;
+        }
+        @keyframes rippleExpand {
+            0% { width: 0; height: 0; opacity: 1; }
+            100% { width: 500px; height: 500px; opacity: 0; margin-left: -250px; margin-top: -250px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="hint">触碰荧幕，唤醒光源</div>
+    <img src="你的全息树图片.png" class="holo-tree" alt="机械树全息投影">
+    <div class="scanline"></div>
+
+    <script>
+        const body = document.body;
+        const hint = document.querySelector('.hint');
+        const holoTree = document.querySelector('.holo-tree');
+        const scanline = document.querySelector('.scanline');
+        let lightSources = [];
+        let unlocked = false;
+
+        // 点击生成光源
+        body.addEventListener('click', (e) => {
+            if (unlocked) return;
+            const light = document.createElement('div');
+            light.className = 'light-source';
+            light.style.left = `${e.clientX - 15}px`;
+            light.style.top = `${e.clientY - 15}px`;
+            body.appendChild(light);
+            lightSources.push(light);
+
+            // 凑齐3个光源触发解锁
+            if (lightSources.length >= 3 && !unlocked) {
+                unlockAnimation();
+            }
+        });
+
+        function unlockAnimation() {
+            unlocked = true;
+            hint.style.opacity = 0;
+            // 生成波纹效果
+            const rect = holoTree.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const ripple = document.createElement('div');
+            ripple.className = 'ripple';
+            ripple.style.left = `${centerX}px`;
+            ripple.style.top = `${centerY}px`;
+            body.appendChild(ripple);
+
+            // 树淡入+扫描线出现
+            setTimeout(() => {
+                holoTree.style.opacity = 1;
+                holoTree.style.transform = 'scale(1)';
+                scanline.style.opacity = 1;
+            }, 500);
+        }
+
+        // 解锁后伪3D视角互动
+        document.addEventListener('mousemove', (e) => {
+            if (!unlocked) return;
+            const moveX = (e.clientX / window.innerWidth - 0.5) * 10;
+            const moveY = (e.clientY / window.innerHeight - 0.5) * 10;
+            holoTree.style.transform = `translateX(${moveX}px) translateY(${moveY}px) rotate(${moveX/5}deg)`;
+        });
+    </script>
+</body>
+</html>
