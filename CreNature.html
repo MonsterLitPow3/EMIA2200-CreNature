@@ -2,7 +2,6 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- 关键：手机适配、允许摄像头、禁止缩放 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CreNature</title>
     <style>
@@ -10,7 +9,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: sans-serif;
+            font-family: system-ui, sans-serif;
         }
         body {
             background: #000;
@@ -18,8 +17,20 @@
             min-height: 100vh;
             overflow: hidden;
         }
-
-        /* 首页容器 */
+        /* 通用设置按钮 全局右上角 */
+        .setting-btn {
+            position: fixed;
+            top: 30px;
+            right: 20px;
+            padding: 6px 12px;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.05);
+            color: rgba(255,255,255,0.7);
+            font-size: 14px;
+            z-index: 999;
+        }
+        /* 首页 */
         .home-wrap {
             width: 100vw;
             height: 100vh;
@@ -29,8 +40,6 @@
             justify-content: center;
             gap: 30px;
         }
-
-        /* 全局按钮样式 */
         .btn {
             width: 220px;
             padding: 16px 0;
@@ -40,17 +49,16 @@
             color: rgba(255,255,255,0.85);
             font-size: 16px;
             letter-spacing: 1px;
-            backdrop-filter: blur(6px);
         }
         .btn:disabled {
             opacity: 0.35;
         }
-
-        /* 相机页面 默认隐藏 */
+        /* 相机页面 */
         .camera-wrap {
             width: 100vw;
             height: 100vh;
             display: none;
+            position: relative;
         }
         video {
             width: 100%;
@@ -59,20 +67,70 @@
         }
         .back-btn {
             position: absolute;
-            top: 40px;
+            top: 30px;
             left: 20px;
-            padding: 8px 16px;
+            padding: 6px 16px;
             border: 1px solid rgba(255,255,255,0.3);
             border-radius: 8px;
             background: rgba(0,0,0,0.2);
             color: #fff;
             font-size: 14px;
         }
+        .shutter-btn {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.4);
+            background: rgba(255,255,255,0.1);
+        }
+        .confirm-shot-btn {
+            position: absolute;
+            bottom: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.35);
+            background: rgba(0,0,0,0.25);
+            color: #fff;
+            display: none;
+        }
+        /* 预览照片页面 */
+        .preview-wrap {
+            width: 100vw;
+            height: 100vh;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 60px;
+            gap: 40px;
+        }
+        .preview-img {
+            width: 70%;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .preview-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        /* 隐藏画布 用来抓拍 */
+        #captureCanvas {
+            display: none;
+        }
     </style>
 </head>
 <body>
 
-<!-- 首页 两个按钮 -->
+<!-- 全局右上角设置按钮 -->
+<button class="setting-btn">設定</button>
+
+<!-- 首页 -->
 <div class="home-wrap" id="homePage">
     <button class="btn" disabled>项目简介模式（暂未开放）</button>
     <button class="btn" id="enterCameraBtn">进入拍照模式</button>
@@ -81,52 +139,113 @@
 <!-- 相机页面 -->
 <div class="camera-wrap" id="cameraPage">
     <video id="video" autoplay playsinline muted></video>
-    <div class="back-btn" id="backHomeBtn">返回</div>
+    <button class="back-btn" id="backHomeBtn">返回</button>
+    <button class="shutter-btn" id="shutterBtn"></button>
+    <button class="confirm-shot-btn" id="confirmShotBtn">确认满意这张照片</button>
 </div>
 
+<!-- 照片预览页面 -->
+<div class="preview-wrap" id="previewPage">
+    <img class="preview-img" id="previewImg" alt="预览照片">
+    <div class="preview-buttons">
+        <button class="btn" id="reTakeBtn">重新拍照</button>
+        <button class="btn" id="downloadBtn">下载照片</button>
+    </div>
+    <button class="back-btn" id="backFromPreviewBtn">返回</button>
+</div>
+
+<!-- 隐藏抓拍画布 -->
+<canvas id="captureCanvas"></canvas>
+
 <script>
-    // 页面元素
-    const homePage = document.getElementById('homePage');
-    const cameraPage = document.getElementById('cameraPage');
-    const enterCameraBtn = document.getElementById('enterCameraBtn');
-    const backHomeBtn = document.getElementById('backHomeBtn');
-    const video = document.getElementById('video');
+// 页面元素
+const homePage = document.getElementById('homePage');
+const cameraPage = document.getElementById('cameraPage');
+const previewPage = document.getElementById('previewPage');
 
-    let mediaStream = null;
+const enterCameraBtn = document.getElementById('enterCameraBtn');
+const backHomeBtn = document.getElementById('backHomeBtn');
+const shutterBtn = document.getElementById('shutterBtn');
+const confirmShotBtn = document.getElementById('confirmShotBtn');
 
-    // 进入拍照模式：申请摄像头权限 + 打开后置相机
-    enterCameraBtn.addEventListener('click', async () => {
-        try {
-            // 固定调用后置摄像头，兼容 iOS / Android
-            mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: 'environment'
-                },
-                audio: false
-            });
+const reTakeBtn = document.getElementById('reTakeBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const backFromPreviewBtn = document.getElementById('backFromPreviewBtn');
 
-            // 把摄像头流绑定到video标签
-            video.srcObject = mediaStream;
+const video = document.getElementById('video');
+const canvas = document.getElementById('captureCanvas');
+const ctx = canvas.getContext('2d');
+const previewImg = document.getElementById('previewImg');
 
-            // 切换页面显示
-            homePage.style.display = 'none';
-            cameraPage.style.display = 'block';
+let mediaStream = null;
+let captureUrl = '';
 
-        } catch (err) {
-            alert('无法获取摄像头权限，请在设置允许浏览器使用摄像头，并使用HTTPS/localhost打开');
-            console.error('摄像头权限错误：', err);
-        }
-    });
+// 进入相机
+enterCameraBtn.addEventListener('click', async () => {
+    try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' },
+            audio: false
+        });
+        video.srcObject = mediaStream;
+        homePage.style.display = 'none';
+        cameraPage.style.display = 'block';
+        confirmShotBtn.style.display = 'none';
+    } catch (err) {
+        alert('请允许摄像头权限，并使用HTTPS/localhost打开');
+    }
+});
 
-    // 返回首页，关闭摄像头
-    backHomeBtn.addEventListener('click', () => {
-        if (mediaStream) {
-            mediaStream.getTracks().forEach(track => track.stop());
-            mediaStream = null;
-        }
-        cameraPage.style.display = 'none';
-        homePage.style.display = 'flex';
-    });
+// 快门拍照
+shutterBtn.addEventListener('click', () => {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+    captureUrl = canvas.toDataURL('image/png');
+    confirmShotBtn.style.display = 'block';
+});
+
+// 确认照片 进入预览页
+confirmShotBtn.addEventListener('click', () => {
+    previewImg.src = captureUrl;
+    cameraPage.style.display = 'none';
+    previewPage.style.display = 'flex';
+});
+
+// 重新拍照
+reTakeBtn.addEventListener('click', () => {
+    previewPage.style.display = 'none';
+    cameraPage.style.display = 'block';
+    confirmShotBtn.style.display = 'none';
+});
+
+// 下载照片（纯前端直接下载，不存后台）
+downloadBtn.addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = captureUrl;
+    a.download = 'CreNature_Photo.png';
+    a.click();
+});
+
+// 相机页返回首页
+backHomeBtn.addEventListener('click', () => {
+    if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+    }
+    cameraPage.style.display = 'none';
+    homePage.style.display = 'flex';
+});
+
+// 预览页返回
+backFromPreviewBtn.addEventListener('click', () => {
+    previewPage.style.display = 'none';
+    homePage.style.display = 'flex';
+    if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+    }
+});
 </script>
 
 </body>
