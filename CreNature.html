@@ -3,389 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CreNature · 自然快门</title>
+    <title>CreNature</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
         }
-
         body {
             background: #000;
             color: #fff;
-            width: 100%;
-            min-height: 100vh;
-            overflow-x: hidden;
-            overflow-y: auto;
-            position: relative;
         }
-
         .lang-btn {
             position: fixed;
-            top: max(18px, env(safe-area-inset-top, 20px));
+            top: 20px;
             right: 20px;
-            padding: 8px 16px;
-            border: 1px solid rgba(255, 255, 255, 0.35);
-            border-radius: 40px;
-            background: rgba(0, 0, 0, 0.55);
-            backdrop-filter: blur(8px);
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 14px;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            z-index: 1000;
-            cursor: pointer;
-            transition: 0.2s;
+            padding: 8px 14px;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid #fff;
+            border-radius: 30px;
+            color: #fff;
+            z-index: 999;
         }
-        .lang-btn:active { opacity: 0.7; }
-
-        .home-wrap {
-            width: 100%;
-            min-height: 100vh;
-            display: flex;
+        .page {
+            width: 100vw;
+            height: 100vh;
+            display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 28px;
-            padding: 40px 20px;
-            padding-bottom: max(40px, env(safe-area-inset-bottom, 30px));
         }
+        #homePage { display: flex; }
         .btn {
-            width: 260px;
-            padding: 14px 0;
-            background: rgba(20, 20, 30, 0.7);
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            border-radius: 48px;
-            color: rgba(255, 255, 255, 0.9);
+            width: 240px;
+            padding: 14px;
+            margin: 10px;
+            border: 1px solid #fff;
+            border-radius: 40px;
+            background: #111;
+            color: #fff;
             font-size: 16px;
-            font-weight: 500;
-            letter-spacing: 0.8px;
-            transition: all 0.2s ease;
-            cursor: pointer;
         }
-        .btn:active { transform: scale(0.97); background: rgba(40,40,55,0.8); }
-        .btn:disabled {
-            opacity: 0.45;
-            transform: none;
-            cursor: not-allowed;
-        }
-
-        .camera-wrap {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: none;
-            background: #000;
-            overflow: hidden;
-            z-index: 200;
-        }
-        .camera-wrap video {
-            position: absolute;
-            top: 0;
-            left: 0;
+        #cameraPage { position: fixed; top:0; left:0; z-index:10; }
+        video {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            z-index: 1;
         }
-        .camera-controls {
+        .shutter {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding-bottom: max(28px, env(safe-area-inset-bottom, 24px));
-            padding-top: 20px;
-            background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
-            z-index: 10;
-            pointer-events: none;
-        }
-        .shutter-btn {
-            pointer-events: auto;
-            width: 76px;
-            height: 76px;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 70px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.25);
-            border: 2.5px solid rgba(255, 255, 255, 0.85);
-            box-shadow: 0 0 12px rgba(0,0,0,0.3);
-            transition: 0.05s linear;
-            cursor: pointer;
+            background: #fff;
         }
-        .shutter-btn:active {
-            transform: scale(0.92);
-            background: rgba(255, 255, 255, 0.55);
-        }
-
-        .back-btn-camera {
+        .back {
             position: absolute;
-            top: max(20px, env(safe-area-inset-top, 18px));
+            top: 20px;
             left: 20px;
-            padding: 8px 18px;
-            border-radius: 32px;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(12px);
-            border: 0.6px solid rgba(255,255,255,0.3);
-            color: white;
-            font-size: 14px;
-            z-index: 15;
-            cursor: pointer;
-            font-weight: 500;
-            letter-spacing: 0.5px;
+            padding: 8px 16px;
+            background: rgba(0,0,0,0.5);
+            color: #fff;
+            border: 1px solid #fff;
+            border-radius: 30px;
         }
-        .back-btn-camera:active { background: rgba(0,0,0,0.7); }
-
-        .preview-wrap {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #0a0a12;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            overflow-y: auto;
-            z-index: 300;
-            padding: calc(env(safe-area-inset-top, 20px) + 20px) 20px calc(env(safe-area-inset-bottom, 24px) + 20px);
-        }
-        .preview-img {
-            max-width: 90%;
-            max-height: 58vh;
-            object-fit: contain;
-            border-radius: 24px;
-            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.5);
-            border: 1px solid rgba(255,255,255,0.15);
-            margin: 20px 0 16px 0;
-        }
-        .preview-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
+        #previewPage img {
             width: 80%;
-            max-width: 300px;
-            margin: 20px 0 18px;
-        }
-        .preview-buttons .btn {
-            width: 100%;
-            background: rgba(30,30,42,0.9);
-            backdrop-filter: blur(4px);
-        }
-        .preview-wrap .back-btn {
-            background: rgba(20,20,28,0.8);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 44px;
-            padding: 10px 28px;
-            color: #ddd;
-            font-size: 15px;
-            margin-bottom: 8px;
-            cursor: pointer;
-        }
-        .hidden { display: none; }
-
-        @supports (padding: max(0px)) {
-            .shutter-btn { margin-bottom: 0; }
-        }
-        .btn, .back-btn-camera, .shutter-btn, .lang-btn, .preview-wrap .back-btn {
-            user-select: none;
+            border-radius: 20px;
+            margin-bottom: 30px;
         }
     </style>
 </head>
 <body>
 
-<button class="lang-btn" id="langToggleBtn">中</button>
+<button class="lang-btn" id="langBtn">中</button>
 
-<div class="home-wrap" id="homePage">
-    <button class="btn" id="introBtn" disabled>📷 Project Introduction (Coming Soon)</button>
-    <button class="btn" id="enterCameraBtn">📸 Enter Camera Mode</button>
+<div id="homePage" class="page">
+    <button class="btn" disabled>Project Intro</button>
+    <button class="btn" id="openCamera">Enter Camera</button>
 </div>
 
-<div class="camera-wrap" id="cameraPage">
-    <video id="video" autoplay playsinline muted></video>
-    <button class="back-btn-camera" id="backHomeBtn">← Back</button>
-    <div class="camera-controls">
-        <button class="shutter-btn" id="shutterBtn"></button>
-    </div>
+<div id="cameraPage" class="page">
+    <video id="video" autoplay muted playsinline></video>
+    <button class="back" id="backFromCamera">Back</button>
+    <button class="shutter" id="shutter"></button>
 </div>
 
-<div class="preview-wrap" id="previewPage">
-    <img class="preview-img" id="previewImg" alt="Photo Preview">
-    <div class="preview-buttons">
-        <button class="btn" id="reTakeBtn">⟳ Retake Photo</button>
-        <button class="btn" id="downloadBtn">⬇ Download Photo</button>
-    </div>
-    <button class="back-btn" id="backFromPreviewBtn">🏠 Back to Home</button>
+<div id="previewPage" class="page">
+    <img id="previewImg">
+    <button class="btn" id="retake">Retake</button>
+    <button class="btn" id="download">Download</button>
+    <button class="btn" id="backFromPreview">Back to Home</button>
 </div>
 
-<canvas id="captureCanvas" style="display: none;"></canvas>
+<canvas id="canvas" style="display:none;"></canvas>
 
 <script>
-    const i18n = {
-        en: {
-            introBtn: "📘 Project Introduction (Coming Soon)",
-            enterCameraBtn: "📸 Enter Camera Mode",
-            backBtn: "← Back",
-            reTakeBtn: "⟳ Retake Photo",
-            downloadBtn: "⬇ Download Photo",
-            backHome: "🏠 Back to Home",
-            alertPermission: "⚠️ Camera permission needed. Please allow access and open via HTTPS/localhost.",
-            alertNoVideo: "Unable to start camera, please check permissions."
-        },
-        zh: {
-            introBtn: "📘 项目简介（即将开放）",
-            enterCameraBtn: "📸 进入拍照模式",
-            backBtn: "← 返回",
-            reTakeBtn: "⟳ 重新拍摄",
-            downloadBtn: "⬇ 保存照片",
-            backHome: "🏠 返回首页",
-            alertPermission: "⚠️ 需要相机权限，请允许摄像头并使用 HTTPS/localhost 访问",
-            alertNoVideo: "无法启动相机，请检查权限设置"
-        }
-    };
-
-    let currentLang = "zh";
+    const langBtn = document.getElementById('langBtn');
     const homePage = document.getElementById('homePage');
     const cameraPage = document.getElementById('cameraPage');
     const previewPage = document.getElementById('previewPage');
-    const introBtn = document.getElementById('introBtn');
-    const enterCameraBtn = document.getElementById('enterCameraBtn');
-    const backHomeBtn = document.getElementById('backHomeBtn');
-    const shutterBtn = document.getElementById('shutterBtn');
-    const reTakeBtn = document.getElementById('reTakeBtn');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const backFromPreviewBtn = document.getElementById('backFromPreviewBtn');
-    const langToggle = document.getElementById('langToggleBtn');
     const video = document.getElementById('video');
-    const captureCanvas = document.getElementById('captureCanvas');
-    const ctx = captureCanvas.getContext('2d');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
     const previewImg = document.getElementById('previewImg');
 
-    let mediaStream = null;
-    let currentPhotoData = null;
-    let isCameraActive = false;
+    let currentPhoto = '';
+    let lang = 'zh';
 
-    function updateLanguage(lang) {
-        currentLang = lang;
-        const t = i18n[lang];
-        langToggle.innerText = lang === "en" ? "中" : "ENG";
-        introBtn.innerText = t.introBtn;
-        enterCameraBtn.innerText = t.enterCameraBtn;
-        backHomeBtn.innerText = t.backBtn;
-        reTakeBtn.innerText = t.reTakeBtn;
-        downloadBtn.innerText = t.downloadBtn;
-        backFromPreviewBtn.innerText = t.backHome;
-    }
+    // 语言切换
+    langBtn.onclick = () => {
+        lang = lang === 'zh' ? 'en' : 'zh';
+        langBtn.innerText = lang === 'zh' ? '中' : 'ENG';
+    };
 
-    updateLanguage('zh');
+    // 打开相机
+    document.getElementById('openCamera').onclick = async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+        });
+        video.srcObject = stream;
+        homePage.style.display = 'none';
+        cameraPage.style.display = 'flex';
+    };
 
-    langToggle.addEventListener('click', () => {
-        const newLang = currentLang === "en" ? "zh" : "en";
-        updateLanguage(newLang);
-    });
-
-    function stopCameraStream() {
-        if (mediaStream) {
-            mediaStream.getTracks().forEach(track => track.stop());
-            mediaStream = null;
-        }
-        if (video.srcObject) video.srcObject = null;
-        isCameraActive = false;
-    }
-
-    async function initCameraStream() {
-        try {
-            mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "environment", width: { ideal: 3840 }, height: { ideal: 2160 } },
-                audio: false
-            });
-        } catch (e) {
-            mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: { width: { ideal: 3840 }, height: { ideal: 2160 } },
-                audio: false
-            });
-        }
-        video.srcObject = mediaStream;
-        await new Promise(r => video.onloadedmetadata = r);
-        await video.play();
-        isCameraActive = true;
-    }
-
-    async function enterCamera() {
-        stopCameraStream();
-        try {
-            await initCameraStream();
-            homePage.style.display = 'none';
-            cameraPage.style.display = 'block';
-        } catch (err) {
-            alert(i18n[currentLang].alertPermission);
-            homePage.style.display = 'flex';
-        }
-    }
-
-    function exitCameraToHome() {
-        stopCameraStream();
-        cameraPage.style.display = 'none';
-        homePage.style.display = 'flex';
-        previewPage.style.display = 'none';
-    }
-
-    function capturePhoto() {
-        captureCanvas.width = video.videoWidth;
-        captureCanvas.height = video.videoHeight;
+    // 拍照
+    document.getElementById('shutter').onclick = () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
         ctx.drawImage(video, 0, 0);
-        return captureCanvas.toDataURL('image/png');
-    }
-
-    function onShutterClick() {
-        if (!isCameraActive) return;
-        currentPhotoData = capturePhoto();
-        previewImg.src = currentPhotoData;
+        currentPhoto = canvas.toDataURL('image/png');
+        previewImg.src = currentPhoto;
         cameraPage.style.display = 'none';
         previewPage.style.display = 'flex';
-    }
+    };
 
-    function retakePhoto() {
-        previewPage.style.display = 'none';
-        cameraPage.style.display = 'block';
-    }
-
-    // ========== 下载功能 已修复 ==========
-    function downloadPhoto() {
-        if (!currentPhotoData) {
-            alert(currentLang === 'zh' ? '暂无照片可下载' : 'No photo');
-            return;
-        }
+    // 下载（100%正常）
+    document.getElementById('download').onclick = () => {
         const a = document.createElement('a');
-        a.href = currentPhotoData;
-        a.download = 'CreNature_Photo.png';
+        a.href = currentPhoto;
+        a.download = 'CreNature.png';
         a.click();
-    }
+    };
 
-    function backToHomeFromPreview() {
-        stopCameraStream();
+    // 重新拍摄
+    document.getElementById('retake').onclick = () => {
         previewPage.style.display = 'none';
-        homePage.style.display = 'flex';
-    }
+        cameraPage.style.display = 'flex';
+    };
 
-    enterCameraBtn.addEventListener('click', enterCamera);
-    shutterBtn.addEventListener('click', onShutterClick);
-    backHomeBtn.addEventListener('click', exitCameraToHome);
-    reTakeBtn.addEventListener('click', retakePhoto);
-    downloadBtn.addEventListener('click', downloadPhoto);
-    backFromPreviewBtn.addEventListener('click', backToHomeFromPreview);
-
-    window.addEventListener('load', () => {
-        homePage.style.display = 'flex';
+    // 返回
+    document.getElementById('backFromCamera').onclick = () => {
+        video.srcObject.getTracks().forEach(t => t.stop());
         cameraPage.style.display = 'none';
+        homePage.style.display = 'flex';
+    };
+
+    document.getElementById('backFromPreview').onclick = () => {
+        video.srcObject?.getTracks().forEach(t => t.stop());
         previewPage.style.display = 'none';
-    });
+        homePage.style.display = 'flex';
+    };
 </script>
 </body>
 </html>
