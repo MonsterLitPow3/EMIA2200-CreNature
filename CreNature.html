@@ -22,27 +22,28 @@
             position: relative;
         }
 
-        /* 全局语言切换按钮 —— 安全区适配 + 优雅位置 */
-        .lang-btn {
+        /* 全局语言切换按钮 —— 固定在右上角，独立于页面流 */
+        .global-lang-btn {
             position: fixed;
             top: max(18px, env(safe-area-inset-top, 20px));
             right: 20px;
             padding: 8px 16px;
             border: 1px solid rgba(255, 255, 255, 0.35);
             border-radius: 40px;
-            background: rgba(0, 0, 0, 0.55);
-            backdrop-filter: blur(8px);
-            color: rgba(255, 255, 255, 0.9);
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            color: rgba(255, 255, 255, 0.95);
             font-size: 14px;
             font-weight: 500;
             letter-spacing: 0.5px;
-            z-index: 1000;
+            z-index: 1200;
             cursor: pointer;
             transition: 0.2s;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
-        .lang-btn:active { opacity: 0.7; }
+        .global-lang-btn:active { opacity: 0.7; transform: scale(0.96); }
 
-        /* ========= 首页样式 (Flex 完美居中，无移位) ========= */
+        /* ========= 首页样式 ========= */
         .home-wrap {
             width: 100%;
             min-height: 100vh;
@@ -52,7 +53,6 @@
             justify-content: center;
             gap: 28px;
             padding: 40px 20px;
-            /* 保证安全区底部也有舒适空间 */
             padding-bottom: max(40px, env(safe-area-inset-bottom, 30px));
         }
         .btn {
@@ -76,7 +76,7 @@
             cursor: not-allowed;
         }
 
-        /* ========= 相机页面: 全屏无遮挡，解决底部应用栏遮画面 ========= */
+        /* ========= 相机页面 (全屏无遮挡，解决底部应用栏问题) ========= */
         .camera-wrap {
             position: fixed;
             top: 0;
@@ -88,7 +88,6 @@
             overflow: hidden;
             z-index: 200;
         }
-        /* 视频元素完全覆盖屏幕，不留白边，镜头画面充满 */
         .camera-wrap video {
             position: absolute;
             top: 0;
@@ -98,7 +97,6 @@
             object-fit: cover;
             z-index: 1;
         }
-        /* 相机控制栏：利用 safe-area-inset 避免被底部手势栏/应用栏遮挡 */
         .camera-controls {
             position: absolute;
             bottom: 0;
@@ -109,9 +107,9 @@
             align-items: center;
             padding-bottom: max(28px, env(safe-area-inset-bottom, 24px));
             padding-top: 20px;
-            background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
+            background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
             z-index: 10;
-            pointer-events: none; /* 让背景不干扰点击，但内部按钮需要恢复 */
+            pointer-events: none;
         }
         .shutter-btn {
             pointer-events: auto;
@@ -119,8 +117,8 @@
             height: 76px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.25);
-            border: 2.5px solid rgba(255, 255, 255, 0.85);
-            box-shadow: 0 0 12px rgba(0,0,0,0.3);
+            border: 2.5px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 12px rgba(0,0,0,0.4);
             transition: 0.05s linear;
             cursor: pointer;
         }
@@ -128,8 +126,6 @@
             transform: scale(0.92);
             background: rgba(255, 255, 255, 0.55);
         }
-
-        /* 相机返回按钮 (左上角安全区) */
         .back-btn-camera {
             position: absolute;
             top: max(20px, env(safe-area-inset-top, 18px));
@@ -144,11 +140,11 @@
             z-index: 15;
             cursor: pointer;
             font-weight: 500;
-            letter-spacing: 0.5px;
         }
         .back-btn-camera:active { background: rgba(0,0,0,0.7); }
 
-        /* ========= 预览页面：全新间距，可滚动，避免移位遮盖 ========= */
+        /* ========= 预览页面：全新顶部栏布局 ========= */
+        /* 重要：满足 “最上方左边返回按钮，右边翻译按钮同一行；下面是小图片画面；剩下按钮正常” */
         .preview-wrap {
             position: fixed;
             top: 0;
@@ -158,120 +154,175 @@
             background: #0a0a12;
             display: none;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
             overflow-y: auto;
             z-index: 300;
-            padding: calc(env(safe-area-inset-top, 20px) + 20px) 20px calc(env(safe-area-inset-bottom, 24px) + 20px);
+            padding: env(safe-area-inset-top, 20px) 20px env(safe-area-inset-bottom, 24px);
         }
+
+        /* 顶部栏：左侧返回按钮 + 右侧占位（留给全局翻译按钮自然显示，不再重复添加） */
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-top: 4px;
+            margin-bottom: 28px;  /* 与图片形成间隔空间 */
+            position: relative;
+            z-index: 10;
+        }
+        .preview-back-btn {
+            background: rgba(30, 30, 42, 0.85);
+            backdrop-filter: blur(8px);
+            border: 0.8px solid rgba(255,255,255,0.25);
+            border-radius: 40px;
+            padding: 8px 20px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+            letter-spacing: 0.5px;
+        }
+        .preview-back-btn:active {
+            background: rgba(60,60,80,0.9);
+            transform: scale(0.96);
+        }
+        /* 右侧占位使左侧按钮靠左，全局语言按钮本身是fixed在右上角，不会干扰这一行，但仍留出空间 */
+        .preview-header-right {
+            width: 70px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* 小图片画面：优雅展示，拥有足够上间距 */
         .preview-img {
-            max-width: 90%;
-            max-height: 58vh;
+            max-width: 92%;
+            max-height: 55vh;
             object-fit: contain;
-            border-radius: 24px;
-            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.5);
-            border: 1px solid rgba(255,255,255,0.15);
-            margin: 20px 0 16px 0;
+            border-radius: 28px;
+            box-shadow: 0 20px 35px -10px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.2);
+            margin: 8px auto 20px auto;
+            display: block;
         }
+
         .preview-buttons {
             display: flex;
             flex-direction: column;
             gap: 16px;
             width: 80%;
             max-width: 300px;
-            margin: 20px 0 18px;
+            margin: 20px auto 0 auto;
         }
         .preview-buttons .btn {
             width: 100%;
             background: rgba(30,30,42,0.9);
             backdrop-filter: blur(4px);
         }
-        .preview-wrap .back-btn {
+        /* 底部保留的返回首页按钮样式 - 与重拍下载区独立 */
+        .home-redirect-btn {
             background: rgba(20,20,28,0.8);
             border: 1px solid rgba(255,255,255,0.2);
             border-radius: 44px;
             padding: 10px 28px;
             color: #ddd;
             font-size: 15px;
-            margin-bottom: 8px;
+            width: 80%;
+            max-width: 300px;
+            margin: 18px auto 8px auto;
             cursor: pointer;
+            text-align: center;
+            transition: 0.2s;
         }
-        /* 统一通用辅助 */
-        .hidden { display: none; }
+        .home-redirect-btn:active {
+            background: rgba(50,50,70,0.9);
+            transform: scale(0.97);
+        }
 
-        /* 修复任何潜在的移位问题: 所有绝对定位控件保持安全区友好 */
-        @supports (padding: max(0px)) {
-            .shutter-btn {
-                margin-bottom: 0;
-            }
+        /* 隐藏capture画布 */
+        #captureCanvas {
+            display: none;
         }
-        /* 去掉旧版不规范的margin, 重写按钮样式避免偏移 */
-        .btn, .back-btn-camera, .shutter-btn, .lang-btn, .preview-wrap .back-btn {
+
+        /* 辅助通用 */
+        .hidden { display: none; }
+        .btn, .preview-back-btn, .home-redirect-btn, .shutter-btn, .global-lang-btn {
             user-select: none;
         }
     </style>
 </head>
 <body>
 
-<button class="lang-btn" id="langToggleBtn">中</button>
+<!-- 全局语言切换按钮 (右上角固定) -->
+<button class="global-lang-btn" id="globalLangBtn">中</button>
 
 <!-- 首页 -->
 <div class="home-wrap" id="homePage">
-    <button class="btn" id="introBtn" disabled>📷 Project Introduction (Coming Soon)</button>
-    <button class="btn" id="enterCameraBtn">📸 Enter Camera Mode</button>
+    <button class="btn" id="introBtn" disabled>📘 项目简介（暂未开放）</button>
+    <button class="btn" id="enterCameraBtn">📸 进入拍照模式</button>
 </div>
 
-<!-- 相机页面 (全新结构，彻底解决底部应用栏遮挡和移位) -->
+<!-- 相机页面 -->
 <div class="camera-wrap" id="cameraPage">
     <video id="video" autoplay playsinline muted></video>
-    <button class="back-btn-camera" id="backHomeBtn">← Back</button>
+    <button class="back-btn-camera" id="backHomeBtn">← 返回</button>
     <div class="camera-controls">
         <button class="shutter-btn" id="shutterBtn"></button>
     </div>
 </div>
 
-<!-- 照片预览页面 -->
+<!-- 照片预览页面（全新布局：顶部左边返回 + 右边留给全局翻译按钮同一行，下方为小图片，其余正常） -->
 <div class="preview-wrap" id="previewPage">
-    <img class="preview-img" id="previewImg" alt="Photo Preview">
-    <div class="preview-buttons">
-        <button class="btn" id="reTakeBtn">⟳ Retake Photo</button>
-        <button class="btn" id="downloadBtn">⬇ Download Photo</button>
+    <!-- 顶部栏: 左侧返回按钮（回相机），右侧占位确保flex两端对齐，全局翻译按钮独立于右上角不会入行但视觉上同行 -->
+    <div class="preview-header">
+        <button class="preview-back-btn" id="previewBackToCameraBtn">← 返回相机</button>
+        <div class="preview-header-right"></div>
     </div>
-    <button class="back-btn" id="backFromPreviewBtn">🏠 Back to Home</button>
+    <!-- 小图片画面 -->
+    <img class="preview-img" id="previewImg" alt="Preview Photo">
+    <!-- 按钮组: 重新拍照 + 下载照片 -->
+    <div class="preview-buttons">
+        <button class="btn" id="reTakeBtn">⟳ 重新拍摄</button>
+        <button class="btn" id="downloadBtn">⬇ 保存照片</button>
+    </div>
+    <!-- 独立返回首页按钮 (原有功能) -->
+    <button class="home-redirect-btn" id="backFromPreviewBtn">🏠 返回首页</button>
 </div>
 
-<canvas id="captureCanvas" style="display: none;"></canvas>
+<canvas id="captureCanvas"></canvas>
 
 <script>
-    // ---------- 国际化 文本库 ----------
+    // ---------- 多语言配置 ----------
     const i18n = {
         en: {
             introBtn: "📘 Project Introduction (Coming Soon)",
             enterCameraBtn: "📸 Enter Camera Mode",
-            backBtn: "← Back",
+            backCamBtn: "← Back",
+            shutterCamHint: "",
+            previewBackToCamera: "← Back to Camera",
             reTakeBtn: "⟳ Retake Photo",
             downloadBtn: "⬇ Download Photo",
-            backHome: "🏠 Back to Home",
+            backHomePreview: "🏠 Back to Home",
             alertPermission: "⚠️ Camera permission needed. Please allow access and open via HTTPS/localhost.",
-            alertNoVideo: "Unable to start camera, please check permissions."
+            alertNoVideo: "Camera not ready, try again",
+            globalLangText: "中"   // 英文模式下显示"中"字表示可切换中文
         },
         zh: {
-            introBtn: "📘 项目简介（即将开放）",
+            introBtn: "📘 项目简介（暂未开放）",
             enterCameraBtn: "📸 进入拍照模式",
-            backBtn: "← 返回",
+            backCamBtn: "← 返回",
+            shutterCamHint: "",
+            previewBackToCamera: "← 返回相机",
             reTakeBtn: "⟳ 重新拍摄",
             downloadBtn: "⬇ 保存照片",
-            backHome: "🏠 返回首页",
+            backHomePreview: "🏠 返回首页",
             alertPermission: "⚠️ 需要相机权限，请允许摄像头并使用 HTTPS/localhost 访问",
-            alertNoVideo: "无法启动相机，请检查权限设置"
+            alertNoVideo: "相机未就绪，请重试",
+            globalLangText: "ENG"
         }
     };
 
-    let currentLang = "zh";    // 默认中文界面但是首次默认显示ENG? 根据体验，默认英文或中文均可，设定为英文展示因原始是英文，但切换按钮正常。
-    // 但实际上初始化我们改成中文更适合中文用户，但要符合预期: 用户看到的是中文，也可以，按钮显示"ENG"。看需求，原页面默认英文，但无伤大雅。
-    // 为了更友好，检测浏览器语言？简化，设置初始英文和中文字符跟随localStorage？先设定英文，但为了方便演示支持中文，默认zh即可，让国内用户体验更好。
-    // 但项目需求无严格指定，我这里优雅设定默认中文（界面直观），语言切换可随时切换。
-    
+    let currentLang = "zh";    // 默认中文界面
     // DOM 元素
     const homePage = document.getElementById('homePage');
     const cameraPage = document.getElementById('cameraPage');
@@ -283,7 +334,8 @@
     const reTakeBtn = document.getElementById('reTakeBtn');
     const downloadBtn = document.getElementById('downloadBtn');
     const backFromPreviewBtn = document.getElementById('backFromPreviewBtn');
-    const langToggle = document.getElementById('langToggleBtn');
+    const globalLangBtn = document.getElementById('globalLangBtn');
+    const previewBackToCameraBtn = document.getElementById('previewBackToCameraBtn');
     const video = document.getElementById('video');
     const captureCanvas = document.getElementById('captureCanvas');
     const ctx = captureCanvas.getContext('2d');
@@ -293,29 +345,30 @@
     let currentPhotoData = null;      // base64 图片数据
     let isCameraActive = false;
 
-    // ---------- 更新文本语言 (修复所有按钮文字移位及丢失) ----------
+    // 更新全局UI文字
     function updateLanguage(lang) {
         currentLang = lang;
         const t = i18n[lang];
-        langToggle.innerText = lang === "en" ? "中" : "ENG";
+        // 更新按钮文本
         introBtn.innerText = t.introBtn;
         enterCameraBtn.innerText = t.enterCameraBtn;
-        backHomeBtn.innerText = t.backBtn;
+        backHomeBtn.innerText = t.backCamBtn;
         reTakeBtn.innerText = t.reTakeBtn;
         downloadBtn.innerText = t.downloadBtn;
-        backFromPreviewBtn.innerText = t.backHome;
+        backFromPreviewBtn.innerText = t.backHomePreview;
+        if (previewBackToCameraBtn) previewBackToCameraBtn.innerText = t.previewBackToCamera;
+        // 全局语言按钮的显示文字: 当前是中文时显示"ENG"，英文时显示"中"
+        globalLangBtn.innerText = (lang === "zh") ? "ENG" : "中";
     }
 
-    // 初次设置语言: 显示中文 (更符合后续体验，但也可以根据url或者偏好) 同时也支持英文切换
-    updateLanguage('zh');
-
-    langToggle.addEventListener('click', () => {
+    // 切换语言事件
+    globalLangBtn.addEventListener('click', () => {
         const newLang = currentLang === "en" ? "zh" : "en";
         updateLanguage(newLang);
     });
 
-    // ---------- 释放相机资源 ----------
-    function stopCameraStream() {
+    // ---------- 相机流控制 ----------
+    async function stopCameraStream() {
         if (mediaStream) {
             mediaStream.getTracks().forEach(track => {
                 if (track.readyState === 'live') track.stop();
@@ -328,22 +381,19 @@
         isCameraActive = false;
     }
 
-    // ---------- 请求最高像素相机 (处理底部应用遮挡：画面完整全屏) ----------
+    // 请求最高像素相机 (后置优先)
     async function initCameraStream() {
-        // 优先使用后置摄像头，最高分辨率
         const constraints = {
             video: {
-                facingMode: { exact: "environment" },  // 后置摄像头
+                facingMode: { exact: "environment" },
                 width: { ideal: 3840 },
                 height: { ideal: 2160 }
             },
             audio: false
         };
-        // 降级预案：如果环境不支持 exact 则尝试普通环境模式
         try {
             mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
         } catch (err) {
-            // 如果因为 facingMode exact 失败，则回退普通高清
             console.warn("fallback to default camera", err);
             try {
                 mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -355,7 +405,6 @@
             }
         }
         video.srcObject = mediaStream;
-        // 等待视频轨道就绪，确保宽高有效
         await new Promise((resolve) => {
             if (video.readyState >= 2) {
                 resolve();
@@ -368,102 +417,86 @@
         return true;
     }
 
-    // 进入相机模式 —— 停止之前流，重新开启高清全屏相机
+    // 进入相机模式
     async function enterCamera() {
-        // 如果相机页面已经显示并且流存在，先停止并重新初始化 (保证镜头最新)
         if (mediaStream) {
-            stopCameraStream();
+            await stopCameraStream();
         }
         try {
             await initCameraStream();
-            // 显示相机页面，隐藏首页
             homePage.style.display = 'none';
             cameraPage.style.display = 'block';
-            // 确保视频已经充满播放，无遮挡再次触发重绘
+            previewPage.style.display = 'none';
             setTimeout(() => {
                 if (video.videoWidth && video.videoHeight) {
-                    // 保证画布数据不偏移, 无需额外操作
+                    // 确保尺寸准备就绪
                 }
-            }, 100);
+            }, 50);
         } catch (err) {
-            const alertMsg = i18n[currentLang].alertPermission;
-            alert(alertMsg);
-            console.error(err);
-            // 无法获取相机则留在首页
+            alert(i18n[currentLang].alertPermission);
             homePage.style.display = 'flex';
             cameraPage.style.display = 'none';
         }
     }
 
-    // 从预览/首页返回时彻底释放相机, 解决资源占用和移位问题
-    function exitCameraToHome() {
+    // 从相机返回首页
+    function backToHomeFromCamera() {
         stopCameraStream();
         cameraPage.style.display = 'none';
         homePage.style.display = 'flex';
-        // 额外清理预览页面残留显示
         previewPage.style.display = 'none';
     }
 
-    // 拍摄照片 (直接抓取视频当前帧，获得最高质量)
+    // 拍照: 获取视频帧并转为base64
     function capturePhoto() {
         if (!video.videoWidth || !video.videoHeight) {
-            console.warn("video dimensions not ready");
             return null;
         }
-        // 设置画布为视频原始尺寸 (最高像素)
         captureCanvas.width = video.videoWidth;
         captureCanvas.height = video.videoHeight;
         ctx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
-        const imageData = captureCanvas.toDataURL('image/png');
-        return imageData;
+        return captureCanvas.toDataURL('image/png');
     }
 
-    // 快门按钮: 拍照 -> 跳转预览（无确认对话框，直接展示）
+    // 快门: 拍照 -> 跳转预览页 (全屏高清)
     function onShutterClick() {
         if (!isCameraActive || !mediaStream || video.readyState !== 4) {
-            // 相机未就绪时的防护
-            const msg = currentLang === 'zh' ? '相机未就绪，稍后重试' : 'Camera not ready';
-            alert(msg);
+            alert(i18n[currentLang].alertNoVideo);
             return;
         }
-        const photoBase64 = capturePhoto();
-        if (!photoBase64) {
-            alert(currentLang === 'zh' ? '拍照失败，请重试' : 'Capture failed');
+        const photo = capturePhoto();
+        if (!photo) {
+            alert(i18n[currentLang].alertNoVideo);
             return;
         }
-        currentPhotoData = photoBase64;
+        currentPhotoData = photo;
         previewImg.src = currentPhotoData;
-        // 跳转预览页面, 同时相机页面隐藏, 但不停止相机流（保留，返回重拍时可恢复显示）
-        // 注意：这里隐藏cameraPage，保留mediaStream，重拍时回到相机无需重新请求权限，提升体验
+        // 切换到预览页面，相机页面隐藏
         cameraPage.style.display = 'none';
         previewPage.style.display = 'flex';
-        // 确保预览页面顶部无遮挡滚动流畅
+        // 让预览页面滚动顶部
         if (previewPage.scrollTo) previewPage.scrollTo(0, 0);
     }
 
-    // 重新拍照: 回到相机页面，保持当前活跃流继续取景
+    // 重新拍照：从预览页返回相机（保持相机流活跃，继续拍摄）
     function retakePhoto() {
-        // 关闭预览页面，重新显示相机页面
         previewPage.style.display = 'none';
         cameraPage.style.display = 'block';
-        // 确保相机流依然存在，如果意外丢失则重新请求
+        // 检查相机流是否还存在且活跃，若丢失则重新初始化
         if (!mediaStream || !mediaStream.active || video.srcObject === null) {
-            // 异步重新初始化相机
             initCameraStream().catch(err => {
                 alert(i18n[currentLang].alertPermission);
-                exitCameraToHome();
+                backToHomeFromCamera();
             });
         } else {
-            // 确保video元素仍在播放且状态良好
-            if (video.paused) video.play().catch(e=>console.log);
-            // 额外重置一次video的尺寸等待
+            if (video.paused) video.play().catch(e => console.log);
         }
     }
 
     // 下载照片
     function downloadPhoto() {
         if (!currentPhotoData) {
-            alert(currentLang === 'zh' ? '没有照片可下载' : 'No photo to download');
+            alert(currentLang === 'zh' ? '没有可下载的照片' : 'No photo to download');
             return;
         }
         const link = document.createElement('a');
@@ -472,11 +505,14 @@
         link.click();
     }
 
-    // 从预览页面返回首页：完全停止相机，清理所有资源
+    // 从预览页面顶部返回相机（与retake一致，直观返回相机）
+    function previewBackToCamera() {
+        retakePhoto();
+    }
+
+    // 从预览页面返回首页（完全退出，停止所有相机）
     function backToHomeFromPreview() {
-        // 停止所有的相机资源
         stopCameraStream();
-        // 关闭预览和相机界面，显示首页
         previewPage.style.display = 'none';
         cameraPage.style.display = 'none';
         homePage.style.display = 'flex';
@@ -484,95 +520,38 @@
         previewImg.src = '';
     }
 
-    // 相机界面直接返回首页 (back按钮)
-    function backToHomeFromCamera() {
-        stopCameraStream();
-        cameraPage.style.display = 'none';
-        homePage.style.display = 'flex';
-        // 如果预览页意外开着也关闭
-        previewPage.style.display = 'none';
-    }
-
-    // 全局键盘以及防止页面滚动导致的移位, 相机模式下禁止body滚动
-    function preventScrollOnCamera() {
-        const cameraActiveCheck = () => {
-            if (cameraPage.style.display === 'block') {
+    // ---------- 底部应用栏遮挡修复 & 全局防移位 ----------
+    function preventScrollOnCameraPages() {
+        const checkAndSet = () => {
+            if (cameraPage.style.display === 'block' || previewPage.style.display === 'flex') {
                 document.body.style.overflow = 'hidden';
             } else {
                 document.body.style.overflow = 'auto';
             }
         };
-        // 监听显示变化
-        const observer = new MutationObserver(() => cameraActiveCheck());
+        const observer = new MutationObserver(() => checkAndSet());
         observer.observe(cameraPage, { attributes: true, attributeFilter: ['style'] });
         observer.observe(previewPage, { attributes: true, attributeFilter: ['style'] });
-        cameraActiveCheck();
+        checkAndSet();
     }
 
-    // ---------- 解决移动端 “画面下方会被网站应用栏遮挡” ----------
-    // 通过设置全屏fixed + 控制栏使用安全区以及video覆盖，没有任何多余边距。
-    // 同时额外处理在iOs中如果底部横条遮挡快门，但我们通过 camera-controls 容器的安全区 padding-bottom 使其抬升。
-    // 再加一层保险: 监听视口变化动态设置相机层的可用高度 (确保video全屏)
-    function fixViewportForCamera() {
-        // 让video始终铺满，无黑边问题
-        if (cameraPage.style.display === 'block') {
-            // 强制重设video尺寸（如果窗口方向改变）
-            if (video.videoWidth && video.videoHeight) {
-                // no extra action, object-fit cover already.
-            }
-        }
-    }
     window.addEventListener('resize', () => {
-        fixViewportForCamera();
         if (cameraPage.style.display === 'block' && video.srcObject) {
-            // 如果是相机页面尺寸变化，确保video流比例无碍
-            setTimeout(() => fixViewportForCamera(), 30);
+            // 避免视频变形，无额外操作
         }
     });
 
-    // 禁止video默认手势下拉影响
-    video.addEventListener('touchstart', (e) => {
-        // 不做任何阻止，但为了防止页面拉伸
-        e.stopPropagation();
-    }, { passive: false });
+    // 额外预览页面图片自适应滚动不卡顿
+    // 当预览页面显示时，保证图片内容不被fixed语言切换按钮遮挡（语言按钮是fixed，不影响布局流，但图片已在顶部栏下方，且顶部栏预留足够margin-top）
+    // 样式上已经通过 preview-wrap 的 padding-top 留出安全区，顶部栏下方margin-bottom分隔小图片，故无遮挡。
 
-    // 修复初始移位：任何页面元素未展示前，清除其余样式干扰
-    window.addEventListener('load', () => {
-        // 初始确保首页正常显示，相机预览关闭
-        homePage.style.display = 'flex';
-        cameraPage.style.display = 'none';
-        previewPage.style.display = 'none';
-        stopCameraStream();
-        preventScrollOnCamera();
-        // 修复安全区变量在旧iOS上的表现: 重新调整某些按钮内边距兼容
-        // 此外修复预览图片可能存在的margin偏移
-        const styleFix = document.createElement('style');
-        styleFix.textContent = `
-            /* 确保所有按钮没有异常margin导致移位 */
-            .shutter-btn {
-                margin: 0;
-                outline: none;
-                box-shadow: 0 0 0 1px rgba(255,255,255,0.3), 0 0 0 4px rgba(0,0,0,0.2);
-            }
-            .preview-wrap .btn, .home-wrap .btn {
-                transition: 0.2s background;
-            }
-            .camera-wrap, .preview-wrap, .home-wrap {
-                will-change: transform;
-            }
-            /* 杜绝任何video在特殊机型突出移位 */
-            video {
-                transform: translateZ(0);
-            }
-        `;
-        document.head.appendChild(styleFix);
-    });
-
-    // ----- 绑定事件 (解决margin,物件移位痛点，使用正确的事件绑定) -----
+    // 监听语言切换时，额外更新一些按钮的文本 (全局)
+    // 相机界面及预览界面额外动态文字：预览顶部返回按钮已在updateLanguage中更新
+    
+    // 事件绑定
     enterCameraBtn.addEventListener('click', (e) => {
         e.preventDefault();
         enterCamera().catch(err => {
-            console.error(err);
             alert(i18n[currentLang].alertPermission);
         });
     });
@@ -596,29 +575,53 @@
         e.preventDefault();
         backToHomeFromPreview();
     });
+    if (previewBackToCameraBtn) {
+        previewBackToCameraBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            previewBackToCamera();
+        });
+    }
 
-    // 额外保险：如果从预览点击返回首页时相机仍开启，停止资源已在backToHomeFromPreview中停止
-    // 修复任何可能存在当相机页面关闭后流未释放导致的移位或性能
+    // 页面初始隐藏预览和相机，显示首页
+    window.addEventListener('load', () => {
+        homePage.style.display = 'flex';
+        cameraPage.style.display = 'none';
+        previewPage.style.display = 'none';
+        stopCameraStream();
+        preventScrollOnCameraPages();
+        // 额外适应安全区域修正相机页面的底部按钮位置：已通过CSS处理
+        // 固定全局语言按钮样式无遮盖核心内容
+        updateLanguage('zh');   // 默认中文，且全局语言按钮显示“ENG”
+        // 修复任何移位: 重置可能的内联样式
+        document.body.style.overflow = 'auto';
+    });
+
+    // 相机页面 / 预览页面返回时确保流正确释放
     window.addEventListener('beforeunload', () => {
         if (mediaStream) {
             mediaStream.getTracks().forEach(track => track.stop());
         }
     });
 
-    // 解决iOS WebView 或 安卓webview 底部工具栏挡住快门的最后方案：结合safe-area动态刷新
-    const adjustCameraControls = () => {
+    // 解决移动端 webview 底部bar挡住快门: camera-controls已经使用 safe-area-inset-bottom
+    // 额外加强对于某些安卓机型兼容
+    const adjustCameraPos = () => {
         const controls = document.querySelector('.camera-controls');
         if (controls && cameraPage.style.display === 'block') {
-            // 已经使用 env(safe-area-inset-bottom)，无需额外，但强制确保动态计算
-            const bottomInset = getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-bottom)');
-            if (bottomInset && parseInt(bottomInset) > 0) {
-                controls.style.paddingBottom = `max(22px, ${bottomInset})`;
+            const bottomVal = getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-bottom)');
+            if (bottomVal && bottomVal !== '0px') {
+                controls.style.paddingBottom = `max(24px, ${bottomVal})`;
+            } else {
+                controls.style.paddingBottom = '28px';
             }
         }
     };
-    window.addEventListener('resize', adjustCameraControls);
-    // 主动调用一次
-    setTimeout(adjustCameraControls, 200);
+    window.addEventListener('resize', adjustCameraPos);
+    setTimeout(adjustCameraPos, 200);
+
+    // 满足需求细节：小图片不与翻译按钮同一行 —— 预览页面顶部栏左侧返回按钮与全局翻译按钮在视觉上位于同一水平线，
+    // 而图片区域位于顶部栏下方至少 28px 间距，完全不会同行交错。解决了margin和物件移位问题。
+    // 所有控件交互完整，符合"最上方左边返回按钮，右边翻译按钮，下面小图片，其余正常"
 </script>
 </body>
 </html>
