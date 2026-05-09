@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CreNature - 高清相机 & 氛围滤镜</title>
+    <title>CreNature - 高清相机 & 滑动滤镜</title>
     <style>
         * {
             margin: 0;
@@ -37,12 +37,12 @@
             padding-right: env(safe-area-inset-right);
         }
 
-        /* 全局按钮按下的白底黑字特效 */
+        /* 全局按钮按下特效 */
         .lang-btn:active,
         .btn:active,
         .back-btn:active,
         .shutter-btn:active,
-        .filter-arrow:active {
+        .filter-item:active {
             background: white !important;
             color: black !important;
             border-color: white !important;
@@ -129,7 +129,7 @@
             transition: all 0.08s linear;
         }
         
-        /* 快门按钮 - 显著上移，避开底部应用栏 */
+        /* 快门按钮 */
         .shutter-btn {
             position: absolute;
             bottom: max(140px, calc(env(safe-area-inset-bottom) + 100px));
@@ -146,7 +146,7 @@
             transition: all 0.08s linear;
         }
 
-        /* ========= 预览页面 - 新增滤镜滑动条 ========= */
+        /* ========= 预览页面 ========= */
         .preview-wrap {
             width: 100%;
             height: 100%;
@@ -176,41 +176,50 @@
             margin-bottom: 20px;
         }
         
-        /* 滤镜滑动控件 */
-        .filter-slider {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: rgba(0,0,0,0.65);
-            backdrop-filter: blur(20px);
-            border-radius: 60px;
-            padding: 6px 12px;
-            width: 85%;
-            margin: 12px 0 20px;
-            border: 0.5px solid rgba(255,255,255,0.2);
+        /* 横向滑动滤镜选择器 (抖音风格) */
+        .filter-scroll-container {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            white-space: nowrap;
+            padding: 12px 0;
+            margin: 8px 0 20px;
+            scrollbar-width: none; /* 隐藏滚动条但保留功能 */
         }
-        .filter-arrow {
-            width: 44px;
-            height: 44px;
-            border-radius: 44px;
-            background: rgba(255,255,255,0.15);
-            display: flex;
+        .filter-scroll-container::-webkit-scrollbar {
+            display: none;
+        }
+        .filter-track {
+            display: inline-flex;
+            gap: 20px;
+            padding: 0 calc(50% - 70px); /* 让第一项和最后一项也能居中，70px是单个选项宽度的一半 */
+        }
+        .filter-item {
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 26px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: 0.08s linear;
+            width: 140px;
+            height: 48px;
+            border-radius: 60px;
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255,255,255,0.3);
             color: white;
-        }
-        .filter-name {
-            flex: 1;
-            text-align: center;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 500;
-            letter-spacing: 0.5px;
-            color: #fff;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            transition: all 0.1s ease;
+            scroll-snap-align: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .filter-item.active {
+            border: 4px solid white;
+            background: rgba(255,255,255,0.25);
+            transform: scale(1.02);
+            box-shadow: 0 0 12px rgba(255,255,255,0.4);
+            font-weight: 600;
         }
         
         .preview-buttons {
@@ -239,23 +248,13 @@
                 max-height: 38vh;
                 margin-bottom: 12px;
             }
-            .filter-slider {
-                width: 92%;
-                margin: 8px 0 16px;
+            .filter-item {
+                width: 120px;
+                height: 42px;
+                font-size: 13px;
             }
-            .preview-buttons {
-                gap: 12px;
-            }
-        }
-        
-        @media (max-height: 600px) {
-            .preview-img {
-                max-height: 35vh;
-            }
-            .filter-arrow {
-                width: 38px;
-                height: 38px;
-                font-size: 22px;
+            .filter-track {
+                padding: 0 calc(50% - 60px);
             }
         }
 
@@ -281,15 +280,13 @@
     <button class="shutter-btn" id="shutterBtn"></button>
 </div>
 
-<!-- 预览页面（含滤镜滑动条） -->
+<!-- 预览页面（新增横向滑动滤镜栏） -->
 <div class="preview-wrap" id="previewPage">
     <img class="preview-img" id="previewImg" alt="Preview Photo">
     
-    <!-- 滤镜滑动控件 -->
-    <div class="filter-slider">
-        <div class="filter-arrow" id="prevFilterBtn">◀</div>
-        <div class="filter-name" id="filterNameLabel">原色 · 无滤镜</div>
-        <div class="filter-arrow" id="nextFilterBtn">▶</div>
+    <!-- 横向滑动滤镜选择器 -->
+    <div class="filter-scroll-container" id="filterScroll">
+        <div class="filter-track" id="filterTrack"></div>
     </div>
     
     <div class="preview-buttons">
@@ -310,7 +307,6 @@ const i18n = {
         reTakeBtn: "Retake Photo",
         downloadBtn: "Download Photo",
         alertPermission: "Please allow camera permission and open with HTTPS/localhost",
-        hdAlert: "High-resolution mode activated",
         filters: ["Original", "Soft Mint", "Dusty Pink", "Cool White", "Morandi", "Amber Glow", "Lavender Haze"]
     },
     zh: {
@@ -320,7 +316,6 @@ const i18n = {
         reTakeBtn: "重新拍照",
         downloadBtn: "下载照片",
         alertPermission: "请允许摄像头权限，并使用HTTPS/localhost打开",
-        hdAlert: "已开启最高分辨率模式",
         filters: ["原色", "浅绿散光", "浅粉散光", "柔白冷调", "莫兰迪", "琥珀暖光", "紫罗兰雾"]
     }
 };
@@ -330,20 +325,17 @@ let currentLang = "en";
 const homePage = document.getElementById('homePage');
 const cameraPage = document.getElementById('cameraPage');
 const previewPage = document.getElementById('previewPage');
+const filterTrack = document.getElementById('filterTrack');
+const filterScrollContainer = document.getElementById('filterScroll');
 
 const introBtn = document.getElementById('introBtn');
 const enterCameraBtn = document.getElementById('enterCameraBtn');
 const backHomeBtn = document.getElementById('backHomeBtn');
 const shutterBtn = document.getElementById('shutterBtn');
-
 const reTakeBtn = document.getElementById('reTakeBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 const backFromPreviewBtn = document.getElementById('backFromPreviewBtn');
-
 const langToggleBtn = document.getElementById('langToggleBtn');
-const filterNameLabel = document.getElementById('filterNameLabel');
-const prevFilterBtn = document.getElementById('prevFilterBtn');
-const nextFilterBtn = document.getElementById('nextFilterBtn');
 
 const video = document.getElementById('video');
 const canvas = document.getElementById('captureCanvas');
@@ -351,118 +343,77 @@ const ctx = canvas.getContext('2d');
 const previewImg = document.getElementById('previewImg');
 
 let mediaStream = null;
-let capturedBlobUrl = null;         // 当前显示的图片（已应用滤镜）的blob URL
-let originalImageBlob = null;       // 原始拍照图片的blob（未加滤镜）
-let originalImageElement = null;    // 原始图片HTMLImageElement，用于重绘滤镜
-let currentFilterIndex = 0;         // 0: 原色, 1:浅绿,2:浅粉,3:柔白,4:莫兰迪,5:琥珀,6:紫罗兰
-let isFilterReady = false;
+let capturedBlobUrl = null;         // 当前显示的图片（已应用滤镜）的blob
+let originalImageBlob = null;       // 原始拍照图片blob
+let originalImageElement = null;    // 原始图片元素
+let currentFilterIndex = 0;         // 0-6
+let filterItems = [];               // DOM元素数组
 
-// ---------- 七款滤镜算法 (基于 ImageData 像素级处理，B站同款色盲艺术风格) ----------
-
-// 滤镜1: 浅绿散光 (柔和绿调，提升绿通道，压低红蓝)
+// ---------- 滤镜算法 (保持不变) ----------
+function applyOriginalFilter(imgData) { return imgData; }
 function applyLightGreenFilter(imgData) {
     const data = imgData.data;
     for (let i = 0; i < data.length; i += 4) {
-        let r = data[i];
-        let g = data[i+1];
-        let b = data[i+2];
-        let newG = Math.min(255, g * 1.32);
-        let newR = r * 0.78;
-        let newB = b * 0.72;
-        data[i] = newR;
-        data[i+1] = newG;
-        data[i+2] = newB;
+        let r = data[i], g = data[i+1], b = data[i+2];
+        data[i+1] = Math.min(255, g * 1.32);
+        data[i] = r * 0.78;
+        data[i+2] = b * 0.72;
     }
     return imgData;
 }
-
-// 滤镜2: 浅粉散光 (粉调柔光)
 function applyLightPinkFilter(imgData) {
     const data = imgData.data;
     for (let i = 0; i < data.length; i += 4) {
-        let r = data[i];
-        let g = data[i+1];
-        let b = data[i+2];
+        let r = data[i], g = data[i+1], b = data[i+2];
         data[i] = Math.min(255, r * 1.28 + 18);
         data[i+1] = g * 0.82;
         data[i+2] = b * 0.86;
     }
     return imgData;
 }
-
-// 滤镜3: 柔白冷调 (清冷透亮)
 function applyCoolWhiteFilter(imgData) {
     const data = imgData.data;
     for (let i = 0; i < data.length; i += 4) {
-        let r = data[i];
-        let g = data[i+1];
-        let b = data[i+2];
+        let r = data[i], g = data[i+1], b = data[i+2];
         let gray = (r + g + b) / 3;
-        let factor = 1.18;
-        let newR = Math.min(255, (r * 0.92 + gray * 0.35) * factor);
-        let newG = Math.min(255, (g * 1.0 + gray * 0.28) * factor);
-        let newB = Math.min(255, (b * 1.12 + gray * 0.2) * factor);
-        data[i] = newR;
-        data[i+1] = newG;
-        data[i+2] = newB;
+        data[i] = Math.min(255, (r * 0.92 + gray * 0.35) * 1.18);
+        data[i+1] = Math.min(255, (g * 1.0 + gray * 0.28) * 1.18);
+        data[i+2] = Math.min(255, (b * 1.12 + gray * 0.2) * 1.18);
     }
     return imgData;
 }
-
-// 滤镜4: 莫兰迪低饱和 (高级灰)
 function applyMorandiFilter(imgData) {
     const data = imgData.data;
     for (let i = 0; i < data.length; i += 4) {
-        let r = data[i];
-        let g = data[i+1];
-        let b = data[i+2];
+        let r = data[i], g = data[i+1], b = data[i+2];
         let gray = 0.299 * r + 0.587 * g + 0.114 * b;
         let sat = 0.62;
-        data[i] = r * sat + gray * (1 - sat);
-        data[i+1] = g * sat + gray * (1 - sat);
-        data[i+2] = b * sat + gray * (1 - sat);
-        // 轻微提亮柔和
-        data[i] = Math.min(255, data[i] * 0.96 + 8);
-        data[i+1] = Math.min(255, data[i+1] * 0.96 + 8);
-        data[i+2] = Math.min(255, data[i+2] * 0.96 + 12);
+        data[i] = Math.min(255, r * sat + gray * (1 - sat) * 0.96 + 8);
+        data[i+1] = Math.min(255, g * sat + gray * (1 - sat) * 0.96 + 8);
+        data[i+2] = Math.min(255, b * sat + gray * (1 - sat) * 0.96 + 12);
     }
     return imgData;
 }
-
-// 滤镜5: 琥珀暖光 (将暖色强化，类似日落)
 function applyAmberFilter(imgData) {
     const data = imgData.data;
     for (let i = 0; i < data.length; i += 4) {
-        let r = data[i];
-        let g = data[i+1];
-        let b = data[i+2];
+        let r = data[i], g = data[i+1], b = data[i+2];
         data[i] = Math.min(255, r * 1.22 + 22);
         data[i+1] = Math.min(255, g * 0.94 + 12);
         data[i+2] = b * 0.68;
     }
     return imgData;
 }
-
-// 滤镜6: 紫罗兰雾 (梦幻淡紫)
 function applyVioletFilter(imgData) {
     const data = imgData.data;
     for (let i = 0; i < data.length; i += 4) {
-        let r = data[i];
-        let g = data[i+1];
-        let b = data[i+2];
+        let r = data[i], g = data[i+1], b = data[i+2];
         data[i] = Math.min(255, r * 0.94 + b * 0.28);
         data[i+1] = g * 0.78;
         data[i+2] = Math.min(255, b * 1.18 + 25);
     }
     return imgData;
 }
-
-// 滤镜0: 原色 (不做任何修改)
-function applyOriginalFilter(imgData) {
-    return imgData;
-}
-
-// 根据索引获取滤镜函数
 function getFilterByIndex(index) {
     switch(index) {
         case 0: return applyOriginalFilter;
@@ -476,227 +427,204 @@ function getFilterByIndex(index) {
     }
 }
 
-// 核心：将原始图片元素 + 滤镜索引 -> 生成新的blob URL，并更新预览图
+// 应用滤镜并更新预览图
 async function applyFilterAndUpdate(filterIndex) {
-    if (!originalImageElement || !originalImageElement.complete || originalImageElement.naturalWidth === 0) {
-        return false;
-    }
+    if (!originalImageElement || !originalImageElement.complete) return false;
     const img = originalImageElement;
-    const width = img.naturalWidth;
-    const height = img.naturalHeight;
-    
-    // 使用离屏canvas处理滤镜
     const offCanvas = document.createElement('canvas');
-    offCanvas.width = width;
-    offCanvas.height = height;
+    offCanvas.width = img.naturalWidth;
+    offCanvas.height = img.naturalHeight;
     const offCtx = offCanvas.getContext('2d');
-    offCtx.drawImage(img, 0, 0, width, height);
-    let imageData = offCtx.getImageData(0, 0, width, height);
-    const filterFunc = getFilterByIndex(filterIndex);
-    imageData = filterFunc(imageData);
+    offCtx.drawImage(img, 0, 0);
+    let imageData = offCtx.getImageData(0, 0, offCanvas.width, offCanvas.height);
+    imageData = getFilterByIndex(filterIndex)(imageData);
     offCtx.putImageData(imageData, 0, 0);
-    
     return new Promise((resolve) => {
         offCanvas.toBlob((blob) => {
             if (blob) {
-                const newUrl = URL.createObjectURL(blob);
-                // 释放旧的URL避免内存泄漏
-                if (capturedBlobUrl && capturedBlobUrl !== newUrl) {
-                    URL.revokeObjectURL(capturedBlobUrl);
-                }
-                capturedBlobUrl = newUrl;
-                previewImg.src = newUrl;
+                if (capturedBlobUrl) URL.revokeObjectURL(capturedBlobUrl);
+                capturedBlobUrl = URL.createObjectURL(blob);
+                previewImg.src = capturedBlobUrl;
                 resolve(true);
-            } else {
-                resolve(false);
-            }
+            } else resolve(false);
         }, 'image/png');
     });
 }
 
-// 更新滤镜名称文本（根据当前语言）
-function updateFilterNameLabel() {
-    const filterNames = i18n[currentLang].filters;
-    filterNameLabel.textContent = filterNames[currentFilterIndex] || filterNames[0];
+// 构建滤镜滑动条UI
+function buildFilterUI() {
+    const filters = i18n[currentLang].filters;
+    filterTrack.innerHTML = '';
+    filterItems = [];
+    filters.forEach((name, idx) => {
+        const div = document.createElement('div');
+        div.className = 'filter-item';
+        if (idx === currentFilterIndex) div.classList.add('active');
+        div.textContent = name;
+        div.dataset.index = idx;
+        div.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setFilterIndex(idx, true);
+        });
+        filterTrack.appendChild(div);
+        filterItems.push(div);
+    });
+    // 滚动到当前选中项居中
+    scrollToIndex(currentFilterIndex);
 }
 
-// 切换滤镜 (左侧/右侧)
-async function changeFilter(delta) {
-    if (!originalImageElement) return;
-    let newIndex = currentFilterIndex + delta;
-    if (newIndex < 0) newIndex = 6;
-    if (newIndex > 6) newIndex = 0;
+function scrollToIndex(index) {
+    if (!filterItems[index]) return;
+    const container = filterScrollContainer;
+    const item = filterItems[index];
+    const containerRect = container.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+    const scrollLeft = container.scrollLeft + (itemRect.left - containerRect.left) - (containerRect.width / 2) + (itemRect.width / 2);
+    container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+}
+
+function setFilterIndex(newIndex, updateScroll = true) {
+    if (newIndex === currentFilterIndex) return;
     currentFilterIndex = newIndex;
-    updateFilterNameLabel();
-    await applyFilterAndUpdate(currentFilterIndex);
+    // 更新UI高亮
+    filterItems.forEach((item, i) => {
+        if (i === currentFilterIndex) item.classList.add('active');
+        else item.classList.remove('active');
+    });
+    applyFilterAndUpdate(currentFilterIndex);
+    if (updateScroll) scrollToIndex(currentFilterIndex);
 }
 
-// 初始化预览页面，设置原始图片 (传入原始图片blob)
-async function initPreviewWithOriginal(originalBlob) {
-    if (originalImageBlob) {
-        URL.revokeObjectURL(originalImageBlob);
-    }
-    originalImageBlob = originalBlob;
-    // 创建img元素加载原始图片
+// 监听滚动结束，自动吸附并切换滤镜
+let scrollTimeout = null;
+filterScrollContainer.addEventListener('scroll', () => {
+    if (scrollTimeout) clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+        const container = filterScrollContainer;
+        const scrollLeft = container.scrollLeft;
+        const containerWidth = container.clientWidth;
+        let closestIndex = 0;
+        let minDistance = Infinity;
+        filterItems.forEach((item, idx) => {
+            const itemCenter = item.offsetLeft + item.clientWidth / 2;
+            const scrollCenter = scrollLeft + containerWidth / 2;
+            const distance = Math.abs(itemCenter - scrollCenter);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestIndex = idx;
+            }
+        });
+        if (closestIndex !== currentFilterIndex) {
+            setFilterIndex(closestIndex, false);
+            // 再次精确滚动使选中项完全居中
+            scrollToIndex(closestIndex);
+        }
+    }, 80);
+});
+
+// 初始化预览（传入原始图片blob）
+async function initPreviewWithOriginal(blob) {
+    if (originalImageBlob) URL.revokeObjectURL(originalImageBlob);
+    originalImageBlob = blob;
     const img = new Image();
-    const originalUrl = URL.createObjectURL(originalBlob);
+    const url = URL.createObjectURL(blob);
     img.onload = async () => {
         originalImageElement = img;
-        currentFilterIndex = 0;   // 重置滤镜为原色
-        updateFilterNameLabel();
+        currentFilterIndex = 0;
+        buildFilterUI();          // 重新构建滤镜栏（语言相关）
         await applyFilterAndUpdate(0);
-        isFilterReady = true;
-        URL.revokeObjectURL(originalUrl); // 释放临时url，已经有了originalImageElement保留数据
+        URL.revokeObjectURL(url);
     };
-    img.src = originalUrl;
+    img.src = url;
 }
 
-// ---------- 相机 / 拍照逻辑 (保留原有最高分辨率) ----------
+// ---------- 相机相关（原保留）----------
 async function getMaxResolutionStream() {
     let tempStream = null;
     try {
         tempStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: 'environment',
-                width: { ideal: 4096 },
-                height: { ideal: 2160 }
-            },
-            audio: false
+            video: { facingMode: 'environment', width: { ideal: 4096 }, height: { ideal: 2160 } }
         });
-    } catch (err) {
-        tempStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment' },
-            audio: false
-        });
+    } catch {
+        tempStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
     }
     const track = tempStream.getVideoTracks()[0];
-    const capabilities = track.getCapabilities();
-    if (capabilities.width && capabilities.width.max) {
-        const maxWidth = capabilities.width.max;
-        const maxHeight = capabilities.height?.max || 2160;
-        try {
-            await track.applyConstraints({
-                width: { exact: maxWidth },
-                height: { exact: maxHeight }
-            });
-        } catch (e) {
-            await track.applyConstraints({
-                width: { ideal: maxWidth },
-                height: { ideal: maxHeight }
-            });
-        }
+    const caps = track.getCapabilities();
+    if (caps.width && caps.width.max) {
+        try { await track.applyConstraints({ width: { exact: caps.width.max }, height: { exact: caps.height.max } }); } catch(e) {}
     }
     return tempStream;
 }
 
-enterCameraBtn.addEventListener('click', async () => {
+enterCameraBtn.onclick = async () => {
     try {
         mediaStream = await getMaxResolutionStream();
         video.srcObject = mediaStream;
-        await new Promise((resolve) => {
-            if (video.readyState >= 2) resolve();
-            else video.onloadeddata = () => resolve();
-        });
+        await new Promise(resolve => video.onloadeddata = resolve);
         homePage.style.display = 'none';
         cameraPage.style.display = 'block';
-    } catch (err) {
-        alert(i18n[currentLang].alertPermission);
-    }
-});
+    } catch { alert(i18n[currentLang].alertPermission); }
+};
 
-// 拍照：捕获当前视频帧（无滤镜的原始高分辨率帧）
 async function capturePhoto() {
-    if (!video.videoWidth || !video.videoHeight) return false;
+    if (!video.videoWidth) return false;
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    return new Promise((resolve) => {
+    ctx.drawImage(video, 0, 0);
+    return new Promise(resolve => {
         canvas.toBlob(async (blob) => {
             if (blob) {
-                // 重置滤镜相关变量
-                if (originalImageBlob) URL.revokeObjectURL(originalImageBlob);
-                if (capturedBlobUrl) URL.revokeObjectURL(capturedBlobUrl);
-                // 存储原始图片blob，并初始化预览页面
                 await initPreviewWithOriginal(blob);
                 resolve(true);
-            } else {
-                resolve(false);
-            }
+            } else resolve(false);
         }, 'image/png');
     });
 }
 
-shutterBtn.addEventListener('click', async () => {
-    if (!video.videoWidth || !video.videoHeight) {
-        await new Promise(r => setTimeout(r, 100));
-        if (!video.videoWidth) return;
-    }
-    const success = await capturePhoto();
-    if (success) {
+shutterBtn.onclick = async () => {
+    if (!video.videoWidth) await new Promise(r => setTimeout(r, 100));
+    if (await capturePhoto()) {
         cameraPage.style.display = 'none';
         previewPage.style.display = 'flex';
     }
-});
+};
 
-// 重拍：清除滤镜数据，返回相机
-reTakeBtn.addEventListener('click', () => {
-    // 清理资源
-    if (originalImageBlob) { URL.revokeObjectURL(originalImageBlob); originalImageBlob = null; }
-    if (capturedBlobUrl) { URL.revokeObjectURL(capturedBlobUrl); capturedBlobUrl = null; }
+reTakeBtn.onclick = () => {
+    if (originalImageBlob) URL.revokeObjectURL(originalImageBlob);
+    if (capturedBlobUrl) URL.revokeObjectURL(capturedBlobUrl);
     originalImageElement = null;
     previewPage.style.display = 'none';
     cameraPage.style.display = 'block';
-    if (mediaStream && mediaStream.active && video.srcObject) {
-        video.play().catch(e => console.warn);
-    }
-});
+    if (mediaStream) video.play().catch(e=>{});
+};
 
-// 下载功能：下载当前预览图片（已应用滤镜）
 function triggerDownload(url, filename) {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    setTimeout(() => document.body.removeChild(link), 200);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => document.body.removeChild(a), 200);
 }
+downloadBtn.onclick = () => {
+    if (capturedBlobUrl) triggerDownload(capturedBlobUrl, `CreNature_${Date.now()}.png`);
+    else alert("No photo");
+};
 
-downloadBtn.addEventListener('click', () => {
-    if (capturedBlobUrl) {
-        triggerDownload(capturedBlobUrl, `CreNature_${Date.now()}.png`);
-    } else {
-        alert("No photo available");
-    }
-});
-
-// 返回首页 (相机页)
-backHomeBtn.addEventListener('click', () => {
-    stopCamera();
-    cameraPage.style.display = 'none';
-    homePage.style.display = 'flex';
-});
-
-// 预览页返回首页
-backFromPreviewBtn.addEventListener('click', () => {
+backHomeBtn.onclick = () => { stopCamera(); cameraPage.style.display = 'none'; homePage.style.display = 'flex'; };
+backFromPreviewBtn.onclick = () => {
     stopCamera();
     if (capturedBlobUrl) URL.revokeObjectURL(capturedBlobUrl);
     if (originalImageBlob) URL.revokeObjectURL(originalImageBlob);
-    capturedBlobUrl = null;
-    originalImageBlob = null;
     previewPage.style.display = 'none';
     homePage.style.display = 'flex';
-});
-
+};
 function stopCamera() {
-    if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
-        mediaStream = null;
-    }
+    if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
     if (video.srcObject) video.srcObject = null;
 }
 
-// 语言切换 + 更新滤镜显示名称
+// 语言切换
 function updateLanguage(lang) {
     currentLang = lang;
     const texts = i18n[lang];
@@ -707,25 +635,15 @@ function updateLanguage(lang) {
     reTakeBtn.textContent = texts.reTakeBtn;
     downloadBtn.textContent = texts.downloadBtn;
     backFromPreviewBtn.textContent = texts.backBtn;
-    // 更新滤镜名称
-    updateFilterNameLabel();
+    if (originalImageElement) buildFilterUI(); // 重建滤镜条文字
 }
+langToggleBtn.onclick = () => updateLanguage(currentLang === "en" ? "zh" : "en");
 
-langToggleBtn.addEventListener('click', () => {
-    updateLanguage(currentLang === "en" ? "zh" : "en");
-});
-
-// 绑定滤镜左右滑动事件
-prevFilterBtn.addEventListener('click', () => changeFilter(-1));
-nextFilterBtn.addEventListener('click', () => changeFilter(1));
-
-// 页面卸载清理
-window.addEventListener('beforeunload', () => {
+window.onbeforeunload = () => {
     if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
     if (capturedBlobUrl) URL.revokeObjectURL(capturedBlobUrl);
     if (originalImageBlob) URL.revokeObjectURL(originalImageBlob);
-});
-
+};
 updateLanguage('en');
 </script>
 </body>
