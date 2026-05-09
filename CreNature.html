@@ -199,12 +199,20 @@
             display: none;
         }
         
+        /* 滤镜区域 - 只在照片模式显示 */
+        .filter-section {
+            width: 100%;
+            display: none;
+        }
         .filter-scroll-container {
             width: 100%;
             overflow-x: auto;
             white-space: nowrap;
             padding: 10px 0;
             margin: 10px 0;
+        }
+        .filter-scroll-container::-webkit-scrollbar {
+            display: none;
         }
         .filter-track {
             display: inline-flex;
@@ -235,6 +243,7 @@
             padding: 8px 20px;
             margin: 10px 0;
             cursor: pointer;
+            width: fit-content;
         }
         .glow-toggle.active {
             background: rgba(255,255,255,0.25);
@@ -257,49 +266,6 @@
             left: 20px;
         }
 
-        .processing-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 1000;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-        }
-        .processing-spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid rgba(255,255,255,0.2);
-            border-top: 3px solid white;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .processing-text {
-            color: white;
-            font-size: 14px;
-        }
-        .processing-progress {
-            width: 200px;
-            height: 3px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 2px;
-        }
-        .processing-progress-bar {
-            width: 0%;
-            height: 100%;
-            background: white;
-            transition: width 0.2s;
-        }
-        
         .filter-badge {
             position: fixed;
             bottom: 20px;
@@ -336,13 +302,15 @@
     <video class="preview-video" id="previewVideo" controls></video>
     <div class="filter-badge" id="filterBadge">原色</div>
     
-    <div class="filter-scroll-container" id="filterScroll">
-        <div class="filter-track" id="filterTrack"></div>
-    </div>
-    
-    <div class="glow-toggle" id="glowToggle">
-        <span>✨</span>
-        <span id="glowLabel">散光模式</span>
+    <!-- 滤镜区域 - 只在照片时显示 -->
+    <div class="filter-section" id="filterSection">
+        <div class="filter-scroll-container" id="filterScroll">
+            <div class="filter-track" id="filterTrack"></div>
+        </div>
+        <div class="glow-toggle" id="glowToggle">
+            <span>✨</span>
+            <span id="glowLabel">散光模式</span>
+        </div>
     </div>
     
     <div class="preview-buttons">
@@ -350,14 +318,6 @@
         <button class="btn" id="downloadBtn">下载</button>
     </div>
     <button class="back-btn" id="backFromPreviewBtn">← 返回</button>
-</div>
-
-<div class="processing-overlay" id="processingOverlay">
-    <div class="processing-spinner"></div>
-    <div class="processing-text" id="processingText">处理中...</div>
-    <div class="processing-progress">
-        <div class="processing-progress-bar" id="progressBar"></div>
-    </div>
 </div>
 
 <canvas id="captureCanvas" style="display: none;"></canvas>
@@ -372,8 +332,6 @@ const i18n = {
         download: "Download",
         filters: ["Original", "Mint", "Rose", "Cool White", "Morandi", "Amber", "Lavender"],
         glow: "Glow Mode",
-        processing: "Processing...",
-        processingVideo: "Applying filters to video (this may take a few seconds)...",
         recording: "REC",
         alertPermission: "Camera permission needed. Please use HTTPS/localhost."
     },
@@ -385,8 +343,6 @@ const i18n = {
         download: "下载",
         filters: ["原色", "浅绿", "浅粉", "冷白", "莫兰迪", "琥珀", "紫罗兰"],
         glow: "散光模式",
-        processing: "处理中...",
-        processingVideo: "正在为视频应用滤镜（可能需要几秒钟）...",
         recording: "录制中",
         alertPermission: "需要摄像头权限，请使用 HTTPS/localhost 访问"
     }
@@ -401,10 +357,9 @@ let recordingStartTime = 0;
 let recordingTimerInterval = null;
 
 // 媒体类型
-let currentMediaType = null;
+let currentMediaType = null; // 'photo' or 'video'
 let originalPhotoBlob = null;
 let originalVideoBlob = null;
-let processedVideoBlob = null;
 let currentFilterIndex = 0;
 let glowEnabled = false;
 let filterItems = [];
@@ -419,11 +374,9 @@ const previewVideo = document.getElementById('previewVideo');
 const filterTrack = document.getElementById('filterTrack');
 const glowToggle = document.getElementById('glowToggle');
 const glowLabel = document.getElementById('glowLabel');
+const filterSection = document.getElementById('filterSection');
 const recordTimer = document.getElementById('recordTimer');
 const langToggleBtn = document.getElementById('langToggleBtn');
-const processingOverlay = document.getElementById('processingOverlay');
-const processingText = document.getElementById('processingText');
-const progressBar = document.getElementById('progressBar');
 const filterBadge = document.getElementById('filterBadge');
 const canvas = document.getElementById('captureCanvas');
 const ctx = canvas.getContext('2d');
@@ -439,20 +392,6 @@ function updateUI() {
     glowLabel.textContent = t.glow;
     langToggleBtn.textContent = currentLang === "zh" ? "English" : "中文";
     if (filterItems.length) buildFilterUI();
-}
-
-function showProcessing(show, text = "") {
-    if (show) {
-        processingText.textContent = text || i18n[currentLang].processing;
-        progressBar.style.width = "0%";
-        processingOverlay.style.display = "flex";
-    } else {
-        processingOverlay.style.display = "none";
-    }
-}
-
-function updateProgress(percent) {
-    progressBar.style.width = Math.min(100, percent) + "%";
 }
 
 function updateFilterBadge() {
@@ -535,7 +474,7 @@ function applyFilterToImageData(imageData, filterIndex, withGlow) {
     return imageData;
 }
 
-// ==================== 照片处理 ====================
+// ==================== 拍照（支持滤镜）====================
 async function takePhoto() {
     if (!video.videoWidth) return;
     
@@ -548,7 +487,13 @@ async function takePhoto() {
             currentMediaType = 'photo';
             originalPhotoBlob = blob;
             originalVideoBlob = null;
-            processedVideoBlob = null;
+            currentFilterIndex = 0;
+            glowEnabled = false;
+            glowToggle.classList.remove('active');
+            
+            // 显示滤镜区域
+            filterSection.style.display = 'block';
+            
             await applyFilterToPhoto();
             
             cameraPage.style.display = 'none';
@@ -592,31 +537,13 @@ async function applyFilterToPhoto() {
     });
 }
 
-// ==================== 视频处理（简化版 - 只处理第一帧做预览）====================
-// 由于完整视频处理太慢，这里改为：视频只显示原片，滤镜只影响照片
-// 如果需要视频滤镜，可以后期扩展使用 WebGL
-async function refreshVideoPreview() {
-    if (!originalVideoBlob) return;
-    
-    // 视频不处理滤镜，直接显示原片
-    const url = URL.createObjectURL(originalVideoBlob);
-    previewVideo.src = url;
-    previewVideo.style.display = 'block';
-    previewImg.style.display = 'none';
-    processedVideoBlob = originalVideoBlob;
-    
-    // 更新提示
-    const filterName = i18n[currentLang].filters[currentFilterIndex];
-    const glowText = glowEnabled ? " ✨" : "";
-    filterBadge.textContent = filterName + glowText + " (视频原片)";
-}
-
-// ==================== 录像功能 ====================
+// ==================== 录像（无滤镜，直接MP4）====================
 async function startRecording() {
     if (!mediaStream) return;
     
     recordedChunks = [];
-    const mimeType = 'video/webm';
+    // 优先使用 MP4 格式
+    const mimeType = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm';
     mediaRecorder = new MediaRecorder(mediaStream, { mimeType });
     
     mediaRecorder.ondataavailable = (e) => {
@@ -624,16 +551,23 @@ async function startRecording() {
     };
     
     mediaRecorder.onstop = async () => {
-        const videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
+        const videoBlob = new Blob(recordedChunks, { type: 'video/mp4' });
         currentMediaType = 'video';
         originalVideoBlob = videoBlob;
         originalPhotoBlob = null;
         
-        await refreshVideoPreview();
+        // 隐藏滤镜区域（视频不支持滤镜）
+        filterSection.style.display = 'none';
+        filterBadge.textContent = "视频 (无滤镜)";
+        
+        // 直接显示视频
+        const url = URL.createObjectURL(videoBlob);
+        previewVideo.src = url;
+        previewVideo.style.display = 'block';
+        previewImg.style.display = 'none';
         
         cameraPage.style.display = 'none';
         previewPage.style.display = 'flex';
-        updateFilterBadge();
         
         stopRecordingTimer();
     };
@@ -699,8 +633,6 @@ function buildFilterUI() {
             
             if (currentMediaType === 'photo' && originalPhotoBlob) {
                 await applyFilterToPhoto();
-            } else if (currentMediaType === 'video' && originalVideoBlob) {
-                await refreshVideoPreview();
             }
         };
         filterTrack.appendChild(div);
@@ -733,7 +665,6 @@ function backToCamera() {
     cameraPage.style.display = 'block';
     originalPhotoBlob = null;
     originalVideoBlob = null;
-    processedVideoBlob = null;
     currentFilterIndex = 0;
     glowEnabled = false;
     glowToggle.classList.remove('active');
@@ -759,7 +690,7 @@ function downloadMedia() {
         const url = URL.createObjectURL(originalVideoBlob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `CreNature_${Date.now()}.webm`;
+        a.download = `CreNature_${Date.now()}.mp4`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -794,8 +725,6 @@ glowToggle.onclick = async () => {
     
     if (currentMediaType === 'photo' && originalPhotoBlob) {
         await applyFilterToPhoto();
-    } else if (currentMediaType === 'video' && originalVideoBlob) {
-        await refreshVideoPreview();
     }
 };
 
