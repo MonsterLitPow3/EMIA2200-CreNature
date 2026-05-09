@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CreNature - 高清相机 & 滑动滤镜 + 视频滤镜</title>
+    <title>CreNature - 高清相机 & 滑动滤镜</title>
     <style>
         * {
             margin: 0;
@@ -300,7 +300,6 @@
             transition: width 0.2s;
         }
         
-        /* 滤镜指示器 */
         .filter-badge {
             position: fixed;
             bottom: 20px;
@@ -374,7 +373,7 @@ const i18n = {
         filters: ["Original", "Mint", "Rose", "Cool White", "Morandi", "Amber", "Lavender"],
         glow: "Glow Mode",
         processing: "Processing...",
-        processingVideo: "Applying filters to video...",
+        processingVideo: "Applying filters to video (this may take a few seconds)...",
         recording: "REC",
         alertPermission: "Camera permission needed. Please use HTTPS/localhost."
     },
@@ -387,7 +386,7 @@ const i18n = {
         filters: ["原色", "浅绿", "浅粉", "冷白", "莫兰迪", "琥珀", "紫罗兰"],
         glow: "散光模式",
         processing: "处理中...",
-        processingVideo: "正在为视频应用滤镜...",
+        processingVideo: "正在为视频应用滤镜（可能需要几秒钟）...",
         recording: "录制中",
         alertPermission: "需要摄像头权限，请使用 HTTPS/localhost 访问"
     }
@@ -456,7 +455,6 @@ function updateProgress(percent) {
     progressBar.style.width = Math.min(100, percent) + "%";
 }
 
-// 更新滤镜名称显示
 function updateFilterBadge() {
     const filters = i18n[currentLang].filters;
     filterBadge.textContent = filters[currentFilterIndex];
@@ -496,24 +494,24 @@ async function initCamera() {
 // ==================== 滤镜核心算法 ====================
 function applyFilterToPixel(r, g, b, index) {
     switch(index) {
-        case 1: // 浅绿
+        case 1:
             return [Math.min(255, r * 0.75), Math.min(255, g * 1.35), Math.min(255, b * 0.7)];
-        case 2: // 浅粉
+        case 2:
             return [Math.min(255, r * 1.3 + 15), Math.min(255, g * 0.8), Math.min(255, b * 0.85)];
-        case 3: // 冷白
+        case 3:
             let gray = (r + g + b) / 3;
             return [Math.min(255, (r * 0.9 + gray * 0.3) * 1.15), 
                     Math.min(255, (g * 0.95 + gray * 0.25) * 1.15), 
                     Math.min(255, (b * 1.1 + gray * 0.2) * 1.15)];
-        case 4: // 莫兰迪
+        case 4:
             let gray2 = 0.299 * r + 0.587 * g + 0.114 * b;
             let sat = 0.6;
             return [Math.min(255, r * sat + gray2 * (1 - sat) * 0.95),
                     Math.min(255, g * sat + gray2 * (1 - sat) * 0.95),
                     Math.min(255, b * sat + gray2 * (1 - sat) * 0.95 + 10)];
-        case 5: // 琥珀
+        case 5:
             return [Math.min(255, r * 1.2 + 18), Math.min(255, g * 0.92 + 10), Math.min(255, b * 0.65)];
-        case 6: // 紫罗兰
+        case 6:
             return [Math.min(255, r * 0.92 + b * 0.3), Math.min(255, g * 0.75), Math.min(255, b * 1.2 + 22)];
         default:
             return [r, g, b];
@@ -529,7 +527,6 @@ function applyFilterToImageData(imageData, filterIndex, withGlow) {
         data[i+2] = b;
         
         if (withGlow) {
-            // 轻微提亮和柔化
             data[i] = Math.min(255, data[i] + 15);
             data[i+1] = Math.min(255, data[i+1] + 12);
             data[i+2] = Math.min(255, data[i+2] + 10);
@@ -595,108 +592,23 @@ async function applyFilterToPhoto() {
     });
 }
 
-// ==================== 视频处理（逐帧滤镜 + 散光）====================
-async function processVideoWithFilters(videoBlob, filterIndex, withGlow, onProgress) {
-    return new Promise(async (resolve) => {
-        const videoUrl = URL.createObjectURL(videoBlob);
-        const sourceVideo = document.createElement('video');
-        sourceVideo.src = videoUrl;
-        sourceVideo.muted = true;
-        
-        await new Promise((resolve) => {
-            sourceVideo.onloadedmetadata = resolve;
-        });
-        
-        await sourceVideo.play();
-        
-        const width = sourceVideo.videoWidth;
-        const height = sourceVideo.videoHeight;
-        const duration = Math.min(sourceVideo.duration, 3);
-        
-        // 创建处理 canvas
-        const processCanvas = document.createElement('canvas');
-        processCanvas.width = width;
-        processCanvas.height = height;
-        const processCtx = processCanvas.getContext('2d');
-        
-        // 创建输出 canvas 流
-        const outputCanvas = document.createElement('canvas');
-        outputCanvas.width = width;
-        outputCanvas.height = height;
-        const outputStream = outputCanvas.captureStream(30);
-        
-        const recorder = new MediaRecorder(outputStream, { 
-            mimeType: 'video/webm',
-            videoBitsPerSecond: 5000000
-        });
-        const chunks = [];
-        
-        recorder.ondataavailable = (e) => {
-            if (e.data.size > 0) chunks.push(e.data);
-        };
-        
-        recorder.onstop = () => {
-            const finalBlob = new Blob(chunks, { type: 'video/webm' });
-            URL.revokeObjectURL(videoUrl);
-            resolve(finalBlob);
-        };
-        
-        recorder.start();
-        
-        const fps = 30;
-        const totalFrames = Math.min(Math.floor(duration * fps), 90);
-        let frame = 0;
-        
-        const processFrame = () => {
-            if (sourceVideo.paused || sourceVideo.ended || frame >= totalFrames) {
-                recorder.stop();
-                return;
-            }
-            
-            // 绘制当前帧
-            processCtx.drawImage(sourceVideo, 0, 0, width, height);
-            let imageData = processCtx.getImageData(0, 0, width, height);
-            
-            // 应用滤镜
-            imageData = applyFilterToImageData(imageData, filterIndex, withGlow);
-            
-            // 输出到 outputCanvas
-            const outCtx = outputCanvas.getContext('2d');
-            outCtx.putImageData(imageData, 0, 0);
-            
-            frame++;
-            if (onProgress) onProgress((frame / totalFrames) * 100);
-            
-            setTimeout(processFrame, 1000 / fps);
-        };
-        
-        sourceVideo.currentTime = 0;
-        sourceVideo.ontimeupdate = () => {
-            if (sourceVideo.currentTime >= frame / fps && !sourceVideo.paused) {
-                processFrame();
-                sourceVideo.ontimeupdate = null;
-            }
-        };
-    });
-}
-
-// 刷新视频预览
+// ==================== 视频处理（简化版 - 只处理第一帧做预览）====================
+// 由于完整视频处理太慢，这里改为：视频只显示原片，滤镜只影响照片
+// 如果需要视频滤镜，可以后期扩展使用 WebGL
 async function refreshVideoPreview() {
     if (!originalVideoBlob) return;
     
-    showProcessing(true, i18n[currentLang].processingVideo);
-    updateProgress(0);
-    
-    processedVideoBlob = await processVideoWithFilters(originalVideoBlob, currentFilterIndex, glowEnabled, (p) => {
-        updateProgress(p);
-    });
-    
-    const url = URL.createObjectURL(processedVideoBlob);
+    // 视频不处理滤镜，直接显示原片
+    const url = URL.createObjectURL(originalVideoBlob);
     previewVideo.src = url;
     previewVideo.style.display = 'block';
     previewImg.style.display = 'none';
+    processedVideoBlob = originalVideoBlob;
     
-    showProcessing(false);
+    // 更新提示
+    const filterName = i18n[currentLang].filters[currentFilterIndex];
+    const glowText = glowEnabled ? " ✨" : "";
+    filterBadge.textContent = filterName + glowText + " (视频原片)";
 }
 
 // ==================== 录像功能 ====================
@@ -704,7 +616,7 @@ async function startRecording() {
     if (!mediaStream) return;
     
     recordedChunks = [];
-    const mimeType = MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/mp4';
+    const mimeType = 'video/webm';
     mediaRecorder = new MediaRecorder(mediaStream, { mimeType });
     
     mediaRecorder.ondataavailable = (e) => {
@@ -717,18 +629,11 @@ async function startRecording() {
         originalVideoBlob = videoBlob;
         originalPhotoBlob = null;
         
-        // 先显示原片，然后处理滤镜
-        const url = URL.createObjectURL(videoBlob);
-        previewVideo.src = url;
-        previewVideo.style.display = 'block';
-        previewImg.style.display = 'none';
+        await refreshVideoPreview();
         
         cameraPage.style.display = 'none';
         previewPage.style.display = 'flex';
         updateFilterBadge();
-        
-        // 应用滤镜
-        await refreshVideoPreview();
         
         stopRecordingTimer();
     };
@@ -850,15 +755,6 @@ function downloadMedia() {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-    } else if (currentMediaType === 'video' && processedVideoBlob) {
-        const url = URL.createObjectURL(processedVideoBlob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `CreNature_${Date.now()}.webm`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 100);
     } else if (currentMediaType === 'video' && originalVideoBlob) {
         const url = URL.createObjectURL(originalVideoBlob);
         const a = document.createElement('a');
