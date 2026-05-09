@@ -1,18 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CreNature - 高清相机</title>
+    <title>CreNature | 电子树 · 滤镜艺术相机</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
             -webkit-user-select: none;
             user-select: none;
-            -webkit-touch-callout: none;
             -webkit-tap-highlight-color: transparent;
         }
 
@@ -21,479 +19,771 @@
             height: 100%;
             overflow: hidden;
             position: fixed;
-            touch-action: none;
-        }
-
-        body {
             background: #000;
-            color: #fff;
-            min-height: 100vh;
-            overflow: hidden;
-            position: fixed;
-            inset: 0;
-            padding-top: env(safe-area-inset-top);
-            padding-bottom: env(safe-area-inset-bottom);
-            padding-left: env(safe-area-inset-left);
-            padding-right: env(safe-area-inset-right);
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
         }
 
-        /* 全局按钮按下的白底黑字特效 */
-        .lang-btn:active,
-        .btn:active,
-        .back-btn:active,
-        .shutter-btn:active {
-            background: white !important;
-            color: black !important;
-            border-color: white !important;
-        }
-        .shutter-btn:active {
-            transform: translateX(-50%) scale(0.94);
-        }
-
-        /* 语言切换按钮 */
-        .lang-btn {
-            position: fixed;
-            top: max(30px, env(safe-area-inset-top) + 10px);
-            right: 20px;
-            padding: 6px 12px;
-            border: 1px solid rgba(255,255,255,0.35);
-            border-radius: 8px;
-            background: rgba(255,255,255,0.08);
-            color: rgba(255,255,255,0.85);
-            font-size: 14px;
-            z-index: 999;
-            backdrop-filter: blur(5px);
-            cursor: pointer;
-            transition: all 0.08s linear;
-        }
-
-        /* 首页 */
-        .home-wrap {
+        /* 页面容器 */
+        .page {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
+            overflow: hidden;
+            transition: opacity 0.25s ease;
+            background: #000;
+        }
+        .page-hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        /* 唤醒遮罩 */
+        #wakeOverlay {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 2000;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             gap: 30px;
-            padding-bottom: max(30px, env(safe-area-inset-bottom));
+            transition: opacity 0.6s ease;
+        }
+        .wake-dots {
+            display: flex;
+            gap: 24px;
+        }
+        .dot {
+            width: 14px;
+            height: 14px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            transition: 0.2s;
+        }
+        .dot.active {
+            background: #fff;
+            box-shadow: 0 0 12px #fff;
+        }
+        .wake-hint {
+            color: rgba(255,255,255,0.5);
+            font-size: 14px;
+            letter-spacing: 2px;
         }
 
-        .btn {
-            width: 220px;
-            padding: 16px 0;
+        /* 首页内容 (唤醒后出现) */
+        #homeContent {
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 28px;
+            padding: max(40px, env(safe-area-inset-top)) 20px max(40px, env(safe-area-inset-bottom));
+        }
+        .tree-canvas-container {
+            width: 260px;
+            height: 260px;
+            margin-bottom: 10px;
+        }
+        canvas#treeCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .btn-main {
+            width: 240px;
+            padding: 14px 0;
             background: transparent;
             border: 1px solid rgba(255,255,255,0.3);
-            border-radius: 12px;
+            border-radius: 40px;
             color: rgba(255,255,255,0.9);
-            font-size: 16px;
-            letter-spacing: 1px;
-            backdrop-filter: blur(2px);
+            font-size: 17px;
+            font-weight: 500;
+            backdrop-filter: blur(4px);
             cursor: pointer;
             transition: all 0.08s linear;
         }
-        .btn:disabled {
-            opacity: 0.35;
-            pointer-events: none;
+        .btn-main:active {
+            background: white !important;
+            color: black !important;
+            border-color: white !important;
         }
 
-        /* 相机页面 */
-        .camera-wrap {
+        /* 简介模式滚动页 */
+        .story-scroll {
             width: 100%;
             height: 100%;
-            display: none;
-            position: relative;
-            overflow: hidden;
+            overflow-y: auto;
+            padding: calc(env(safe-area-inset-top) + 60px) 24px 60px 24px;
+            color: #ddd;
+            line-height: 1.5;
+        }
+        .story-scroll h2 {
+            color: #fff;
+            margin: 24px 0 12px;
+            font-weight: 500;
+            letter-spacing: -0.3px;
+        }
+        .story-scroll p {
+            margin-bottom: 16px;
+            font-size: 15px;
+            opacity: 0.8;
+        }
+        .back-home-btn {
+            position: fixed;
+            top: max(20px, env(safe-area-inset-top) + 10px);
+            left: 20px;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 30px;
+            padding: 8px 18px;
+            color: white;
+            font-size: 14px;
+            z-index: 100;
+            cursor: pointer;
+        }
+        .back-home-btn:active {
+            background: white !important;
+            color: black !important;
+        }
+
+        /* 相机实时预览界面 */
+        .camera-live {
             background: #000;
         }
-        video {
+        #liveCanvas {
             width: 100%;
             height: 100%;
             object-fit: cover;
             display: block;
         }
-        .back-btn {
+        .filter-bar {
             position: absolute;
-            top: max(30px, env(safe-area-inset-top) + 10px);
-            left: 20px;
-            padding: 6px 16px;
-            border: 1px solid rgba(255,255,255,0.4);
-            border-radius: 8px;
-            background: rgba(0,0,0,0.45);
-            color: #fff;
-            font-size: 14px;
-            z-index: 10;
-            backdrop-filter: blur(5px);
-            cursor: pointer;
-            transition: all 0.08s linear;
+            bottom: max(30px, env(safe-area-inset-bottom) + 20px);
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 12px 16px;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(20px);
+            z-index: 20;
         }
-        
-        /* 快门按钮 - 显著上移，避开底部应用栏 */
-        .shutter-btn {
+        .filter-chip {
+            padding: 8px 16px;
+            border-radius: 40px;
+            background: rgba(255,255,255,0.15);
+            border: 0.5px solid rgba(255,255,255,0.3);
+            color: white;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.08s linear;
+        }
+        .filter-chip:active {
+            background: white !important;
+            color: black !important;
+        }
+        .filter-chip.active-filter {
+            background: white;
+            color: black;
+            border-color: white;
+        }
+        .camera-shutter {
             position: absolute;
-            bottom: max(140px, calc(env(safe-area-inset-bottom) + 100px));
+            bottom: max(120px, calc(env(safe-area-inset-bottom) + 100px));
             left: 50%;
             transform: translateX(-50%);
-            width: 72px;
-            height: 72px;
+            width: 70px;
+            height: 70px;
             border-radius: 50%;
-            border: 2.5px solid rgba(255,255,255,0.6);
             background: rgba(255,255,255,0.2);
-            z-index: 10;
+            border: 2px solid rgba(255,255,255,0.8);
             cursor: pointer;
-            backdrop-filter: blur(4px);
-            transition: all 0.08s linear;
+            z-index: 25;
+        }
+        .camera-shutter:active {
+            background: white !important;
+            transform: translateX(-50%) scale(0.94);
         }
 
-        /* ========= 预览页面 - 彻底解决底部应用栏遮挡 ========= */
-        .preview-wrap {
-            width: 100%;
-            height: 100%;
-            display: none;
+        /* 照片编辑预览页 (滤镜滑动切换) */
+        .edit-container {
+            display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            height: 100%;
+            padding: max(70px, env(safe-area-inset-top) + 20px) 20px max(90px, env(safe-area-inset-bottom) + 30px);
             background: #000;
-            position: relative;
-            overflow: hidden;
-            padding: 0 20px;
-            padding-top: max(70px, env(safe-area-inset-top) + 20px);
-            padding-bottom: max(70px, calc(env(safe-area-inset-bottom) + 85px));
-            box-sizing: border-box;
         }
-        
-        .preview-img {
-            max-width: 90%;
-            max-height: 50vh;
-            width: auto;
-            height: auto;
-            border-radius: 24px;
+        .edit-preview-img {
+            max-width: 85%;
+            max-height: 55vh;
+            border-radius: 28px;
             border: 1px solid rgba(255,255,255,0.2);
             object-fit: contain;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.5);
-            flex-shrink: 0;
             margin-bottom: 24px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.5);
         }
-        
-        .preview-buttons {
+        .filter-slider-area {
+            width: 90%;
+            margin: 12px 0 20px;
             display: flex;
-            flex-direction: column;
-            gap: 20px;
-            width: 100%;
             align-items: center;
-            flex-shrink: 0;
-            margin: 0;
+            gap: 12px;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(16px);
+            border-radius: 60px;
+            padding: 6px 12px;
         }
-        
-        .preview-buttons .btn {
-            width: 240px;
+        .arrow-btn {
+            background: rgba(255,255,255,0.2);
+            width: 40px;
+            height: 40px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
         }
-        
-        .preview-wrap .back-btn {
-            position: fixed;
-            top: max(30px, env(safe-area-inset-top) + 10px);
-            left: 20px;
-            z-index: 20;
+        .arrow-btn:active {
+            background: white;
+            color: black;
         }
-        
-        @media (max-width: 480px) and (max-height: 700px) {
-            .preview-img {
-                max-height: 42vh;
-                margin-bottom: 16px;
-            }
-            .preview-buttons {
-                gap: 15px;
-            }
-            .preview-wrap {
-                padding-bottom: max(70px, calc(env(safe-area-inset-bottom) + 80px));
-            }
+        #filterNameDisplay {
+            flex: 1;
+            text-align: center;
+            font-weight: 500;
+            font-size: 16px;
+            color: white;
+            letter-spacing: 1px;
         }
-        
-        @media (max-height: 600px) {
-            .preview-img {
-                max-height: 38vh;
-            }
-            .preview-buttons .btn {
-                padding: 12px 0;
-                width: 210px;
-            }
+        .edit-buttons {
+            display: flex;
+            gap: 20px;
+            margin-top: 8px;
+        }
+        .small-btn {
+            padding: 12px 24px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 40px;
+            color: white;
+            font-size: 15px;
+            cursor: pointer;
+        }
+        .small-btn:active {
+            background: white !important;
+            color: black !important;
         }
 
-        #captureCanvas {
+        /* 辅助 */
+        .hidden {
             display: none;
+        }
+        button {
+            background: none;
+            border: none;
         }
     </style>
 </head>
 <body>
 
-<button class="lang-btn" id="langToggleBtn">ENG</button>
-
-<!-- 首页 -->
-<div class="home-wrap" id="homePage">
-    <button class="btn" id="introBtn" disabled>Project Introduction (Coming Soon)</button>
-    <button class="btn" id="enterCameraBtn">Enter Camera Mode</button>
-</div>
-
-<!-- 相机页面 -->
-<div class="camera-wrap" id="cameraPage">
-    <video id="video" autoplay playsinline muted></video>
-    <button class="back-btn" id="backHomeBtn">Back</button>
-    <button class="shutter-btn" id="shutterBtn"></button>
-</div>
-
-<!-- 预览页面 -->
-<div class="preview-wrap" id="previewPage">
-    <img class="preview-img" id="previewImg" alt="Preview Photo">
-    <div class="preview-buttons">
-        <button class="btn" id="reTakeBtn">Retake Photo</button>
-        <button class="btn" id="downloadBtn">Download Photo</button>
+<!-- 唤醒遮罩 -->
+<div id="wakeOverlay">
+    <div class="wake-dots">
+        <div class="dot" id="dot1"></div>
+        <div class="dot" id="dot2"></div>
+        <div class="dot" id="dot3"></div>
     </div>
-    <button class="back-btn" id="backFromPreviewBtn">Back</button>
+    <div class="wake-hint">touch three times · 三次轻触唤醒</div>
 </div>
 
-<canvas id="captureCanvas"></canvas>
+<!-- 首页内容(唤醒后显示) -->
+<div id="homePage" class="page page-hidden">
+    <div id="homeContent">
+        <div class="tree-canvas-container">
+            <canvas id="treeCanvas" width="400" height="400"></canvas>
+        </div>
+        <button class="btn-main" id="storyBtn">🌿 项目简介故事</button>
+        <button class="btn-main" id="cameraModeBtn">📸 拍照滤镜收藏</button>
+    </div>
+</div>
+
+<!-- 简介模式页面 -->
+<div id="storyPage" class="page page-hidden">
+    <div class="back-home-btn" data-back="home">← 返回首页</div>
+    <div class="story-scroll">
+        <h2>CreNature · 电子生命树</h2>
+        <p>一件由20个高精度舵机驱动的动态机械艺术装置，结合透明树脂叶片与光纤灯光，模拟自然呼吸与脉动。</p>
+        <h2>⚙️ 机械臂结构</h2>
+        <p>仿生关节模组，每个舵机独立控制花叶开合角度，构建错落的有机树冠。不锈钢骨架配合轻量化设计，呈现科技与自然的融合。</p>
+        <h2>🎨 材质与光影</h2>
+        <p>半透明白色树脂叶片，内置可编程RGB灯带。灯光从内部晕染，配合外部环境光，产生迷雾般的散光效果。</p>
+        <h2>✨ 创作故事</h2>
+        <p>历时8个月，从仿生学到交互艺术，CreNature 试图探索数字时代的“第二自然”——机械也能拥有温柔的呼吸感。</p>
+        <h2>🏆 成果展示</h2>
+        <p>曾受邀参加新媒体艺术展，观众可以触摸感应舵机变化，灯光随心跳律动。目前持续迭代色盲友好滤镜视觉系统。</p>
+    </div>
+</div>
+
+<!-- 实时相机模式页面 -->
+<div id="cameraLivePage" class="page page-hidden">
+    <canvas id="liveCanvas"></canvas>
+    <div class="filter-bar" id="liveFilterBar"></div>
+    <div class="camera-shutter" id="shutterBtn"></div>
+    <div class="back-home-btn" style="top: 20px; left: 20px;" data-back="home">← 返回</div>
+</div>
+
+<!-- 照片编辑预览页 (滤镜滑动切换) -->
+<div id="editPage" class="page page-hidden">
+    <div class="edit-container">
+        <img id="editImage" class="edit-preview-img" alt="preview">
+        <div class="filter-slider-area">
+            <div class="arrow-btn" id="prevFilterBtn">◀</div>
+            <div id="filterNameDisplay">原图</div>
+            <div class="arrow-btn" id="nextFilterBtn">▶</div>
+        </div>
+        <div class="edit-buttons">
+            <button class="small-btn" id="retakeFromEditBtn">重新拍照</button>
+            <button class="small-btn" id="downloadEditBtn">💾 下载照片</button>
+        </div>
+        <div class="back-home-btn" style="position: fixed; top: 20px; left: 20px;" data-back="camera">← 返回相机</div>
+    </div>
+</div>
 
 <script>
-const i18n = {
-    en: {
-        introBtn: "Project Introduction (Coming Soon)",
-        enterCameraBtn: "Enter Camera Mode",
-        backBtn: "Back",
-        reTakeBtn: "Retake Photo",
-        downloadBtn: "Download Photo",
-        alertPermission: "Please allow camera permission and open with HTTPS/localhost",
-        hdAlert: "High-resolution mode activated"
-    },
-    zh: {
-        introBtn: "项目简介模式（暂未开放）",
-        enterCameraBtn: "进入拍照模式",
-        backBtn: "返回",
-        reTakeBtn: "重新拍照",
-        downloadBtn: "下载照片",
-        alertPermission: "请允许摄像头权限，并使用HTTPS/localhost打开",
-        hdAlert: "已开启最高分辨率模式"
-    }
-};
-
-let currentLang = "en";
-
-const homePage = document.getElementById('homePage');
-const cameraPage = document.getElementById('cameraPage');
-const previewPage = document.getElementById('previewPage');
-
-const introBtn = document.getElementById('introBtn');
-const enterCameraBtn = document.getElementById('enterCameraBtn');
-const backHomeBtn = document.getElementById('backHomeBtn');
-const shutterBtn = document.getElementById('shutterBtn');
-
-const reTakeBtn = document.getElementById('reTakeBtn');
-const downloadBtn = document.getElementById('downloadBtn');
-const backFromPreviewBtn = document.getElementById('backFromPreviewBtn');
-
-const langToggleBtn = document.getElementById('langToggleBtn');
-
-const video = document.getElementById('video');
-const canvas = document.getElementById('captureCanvas');
-const ctx = canvas.getContext('2d');
-const previewImg = document.getElementById('previewImg');
-
-let mediaStream = null;
-let capturedBlobUrl = null;
-
-// 语言切换
-function updateLanguage(lang) {
-    currentLang = lang;
-    const texts = i18n[lang];
-    langToggleBtn.textContent = lang === "en" ? "中" : "ENG";
-    introBtn.textContent = texts.introBtn;
-    enterCameraBtn.textContent = texts.enterCameraBtn;
-    backHomeBtn.textContent = texts.backBtn;
-    reTakeBtn.textContent = texts.reTakeBtn;
-    downloadBtn.textContent = texts.downloadBtn;
-    backFromPreviewBtn.textContent = texts.backBtn;
-}
-
-langToggleBtn.addEventListener('click', () => {
-    updateLanguage(currentLang === "en" ? "zh" : "en");
-});
-
-// 获取最高分辨率约束
-async function getMaxResolutionStream() {
-    // 先请求一个基础流（后置摄像头）
-    let tempStream = null;
-    try {
-        tempStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: 'environment',
-                width: { ideal: 4096 },
-                height: { ideal: 2160 }
-            },
-            audio: false
-        });
-    } catch (err) {
-        // 降级，不指定高分辨率
-        tempStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment' },
-            audio: false
-        });
-    }
+    // ----------------------------- 全局变量 -----------------------------
+    let currentPage = 'wake';   // wake, home, story, camera, edit
+    let mediaStream = null;
+    let animationId = null;
+    let currentLiveFilter = 'original';   // 实时滤镜类型
+    let photoCapturedBlobUrl = null;       // 当前编辑页的 base64 / blob
+    let originalCaptureImageData = null;    // 原始拍照 ImageData (未加滤镜)
+    let currentEditFilterIndex = 0;
+    let canvasForFilter = document.createElement('canvas');
+    let ctxFilter = canvasForFilter.getContext('2d');
     
-    const track = tempStream.getVideoTracks()[0];
-    const capabilities = track.getCapabilities();
+    // 定义7款滤镜 (名称 + 算法函数)
+    const FILTERS = [
+        { name: '🌿 原色', id: 'original', apply: (imgData) => imgData },
+        { name: '🍃 浅绿散光', id: 'lightgreen', apply: applyLightGreenFilter },
+        { name: '🌸 浅粉散光', id: 'lightpink', apply: applyLightPinkFilter },
+        { name: '❄️ 柔白冷调', id: 'coolwhite', apply: applyCoolWhiteFilter },
+        { name: '🎨 莫兰迪', id: 'morandi', apply: applyMorandiFilter },
+        { name: '✨ 暖光琥珀', id: 'amber', apply: applyAmberFilter },
+        { name: '💜 紫罗兰雾', id: 'violet', apply: applyVioletFilter }
+    ];
     
-    // 尝试应用最高可用分辨率
-    if (capabilities.width && capabilities.width.max) {
-        const maxWidth = capabilities.width.max;
-        const maxHeight = capabilities.height?.max || 2160;
-        try {
-            await track.applyConstraints({
-                width: { exact: maxWidth },
-                height: { exact: maxHeight }
-            });
-            console.log(`Applied max resolution: ${maxWidth}x${maxHeight}`);
-        } catch (e) {
-            // 如果不支持 exact，尝试 ideal
-            await track.applyConstraints({
-                width: { ideal: maxWidth },
-                height: { ideal: maxHeight }
-            });
+    // 滤镜像素算法 (rgb通道重映射 + 柔和散光叠加)
+    function applyLightGreenFilter(imgData) {
+        let data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            let r = data[i];
+            let g = data[i+1];
+            let b = data[i+2];
+            // 增强绿色，降低红蓝，轻微柔光
+            let newG = Math.min(255, g * 1.35);
+            let newR = r * 0.75;
+            let newB = b * 0.7;
+            data[i] = newR;
+            data[i+1] = newG;
+            data[i+2] = newB;
+            // 整体增加透亮
+            data[i+3] = 255;
         }
+        return imgData;
     }
-    return tempStream;
-}
-
-// 进入相机
-enterCameraBtn.addEventListener('click', async () => {
-    try {
-        // 获取最高分辨率流
-        mediaStream = await getMaxResolutionStream();
-        video.srcObject = mediaStream;
-        
-        // 等待视频元数据加载完成
-        await new Promise((resolve) => {
-            if (video.readyState >= 2) resolve();
-            else video.onloadeddata = () => resolve();
-        });
-        
-        homePage.style.display = 'none';
-        cameraPage.style.display = 'block';
-    } catch (err) {
-        console.warn(err);
-        alert(i18n[currentLang].alertPermission);
+    function applyLightPinkFilter(imgData) {
+        let data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            let r = data[i];
+            let g = data[i+1];
+            let b = data[i+2];
+            data[i] = Math.min(255, r * 1.28);
+            data[i+1] = g * 0.8;
+            data[i+2] = b * 0.85;
+            // 粉色调
+            data[i] = Math.min(255, data[i] + 25);
+            data[i+1] = Math.min(255, data[i+1] + 15);
+        }
+        return imgData;
     }
-});
-
-// 拍照：生成高分辨率照片
-async function capturePhoto() {
-    if (!video.videoWidth || !video.videoHeight) return false;
+    function applyCoolWhiteFilter(imgData) {
+        let data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            let r = data[i];
+            let g = data[i+1];
+            let b = data[i+2];
+            let gray = (r + g + b) / 3;
+            let factor = 1.2;
+            let newR = Math.min(255, (r * 0.9 + gray * 0.4) * factor);
+            let newG = Math.min(255, (g * 1.0 + gray * 0.3) * factor);
+            let newB = Math.min(255, (b * 1.15 + gray * 0.2) * factor);
+            data[i] = newR;
+            data[i+1] = newG;
+            data[i+2] = newB;
+        }
+        return imgData;
+    }
+    function applyMorandiFilter(imgData) {
+        let data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            let r = data[i];
+            let g = data[i+1];
+            let b = data[i+2];
+            let sat = 0.65;
+            let gray = 0.299 * r + 0.587 * g + 0.114 * b;
+            data[i] = r * sat + gray * (1 - sat);
+            data[i+1] = g * sat + gray * (1 - sat);
+            data[i+2] = b * sat + gray * (1 - sat);
+            // 柔和
+            data[i] = Math.min(255, data[i] * 0.96 + 8);
+            data[i+1] = Math.min(255, data[i+1] * 0.96 + 8);
+            data[i+2] = Math.min(255, data[i+2] * 0.96 + 12);
+        }
+        return imgData;
+    }
+    function applyAmberFilter(imgData) {
+        let data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            let r = data[i];
+            let g = data[i+1];
+            let b = data[i+2];
+            data[i] = Math.min(255, r * 1.25 + 28);
+            data[i+1] = Math.min(255, g * 0.9 + 10);
+            data[i+2] = b * 0.65;
+        }
+        return imgData;
+    }
+    function applyVioletFilter(imgData) {
+        let data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            let r = data[i];
+            let g = data[i+1];
+            let b = data[i+2];
+            data[i] = Math.min(255, r * 0.9 + b * 0.3);
+            data[i+1] = g * 0.75;
+            data[i+2] = Math.min(255, b * 1.2 + 30);
+        }
+        return imgData;
+    }
     
-    // 使用视频原始分辨率（已经是最高）
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    const previewDataUrl = canvas.toDataURL('image/png');
-    previewImg.src = previewDataUrl;
-    
-    if (capturedBlobUrl) URL.revokeObjectURL(capturedBlobUrl);
-    
-    return new Promise((resolve) => {
-        canvas.toBlob((blob) => {
-            if (blob) {
-                capturedBlobUrl = URL.createObjectURL(blob);
-                resolve(true);
-            } else {
-                capturedBlobUrl = previewDataUrl;
-                resolve(true);
-            }
-        }, 'image/png');
-    });
-}
-
-shutterBtn.addEventListener('click', async () => {
-    // 确保视频尺寸有效
-    if (!video.videoWidth || !video.videoHeight) {
-        await new Promise(r => setTimeout(r, 100));
-        if (!video.videoWidth) return;
-    }
-    const success = await capturePhoto();
-    if (success) {
-        cameraPage.style.display = 'none';
-        previewPage.style.display = 'flex';
-    }
-});
-
-// 重拍
-reTakeBtn.addEventListener('click', () => {
-    previewPage.style.display = 'none';
-    cameraPage.style.display = 'block';
-    if (mediaStream && mediaStream.active && video.srcObject) {
-        video.play().catch(e => console.warn);
-    }
-});
-
-// 下载功能（全平台兼容）
-function triggerDownload(url, filename) {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    setTimeout(() => document.body.removeChild(link), 200);
-}
-
-downloadBtn.addEventListener('click', () => {
-    if (!capturedBlobUrl) {
-        if (canvas.width && canvas.height) {
-            canvas.toBlob((blob) => {
+    // 应用滤镜到图片元素 (返回blob url)
+    async function applyFilterToImage(imgElement, filterIndex) {
+        if (!imgElement.complete || imgElement.naturalWidth === 0) return null;
+        const w = imgElement.naturalWidth;
+        const h = imgElement.naturalHeight;
+        canvasForFilter.width = w;
+        canvasForFilter.height = h;
+        const ctx = canvasForFilter.getContext('2d');
+        ctx.drawImage(imgElement, 0, 0, w, h);
+        let imageData = ctx.getImageData(0, 0, w, h);
+        const filterFunc = FILTERS[filterIndex].apply;
+        imageData = filterFunc(imageData);
+        ctx.putImageData(imageData, 0, 0);
+        return new Promise((resolve) => {
+            canvasForFilter.toBlob((blob) => {
                 if (blob) {
-                    const tempUrl = URL.createObjectURL(blob);
-                    triggerDownload(tempUrl, `CreNature_${Date.now()}.png`);
-                    setTimeout(() => URL.revokeObjectURL(tempUrl), 300);
-                } else {
-                    alert("Photo not ready, please retake.");
-                }
+                    const url = URL.createObjectURL(blob);
+                    resolve(url);
+                } else resolve(null);
             }, 'image/png');
-        } else {
-            alert("No photo captured. Please take a photo first.");
+        });
+    }
+    
+    // 实时相机滤镜渲染循环 (将video绘制到liveCanvas并应用滤镜)
+    let videoElem = null;
+    let liveCanvas, liveCtx;
+    function startCameraFilterLoop() {
+        if (!videoElem) return;
+        if (animationId) cancelAnimationFrame(animationId);
+        const video = videoElem;
+        const canvas = document.getElementById('liveCanvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const applyCurrent = (imgData) => {
+            if (currentLiveFilter === 'original') return imgData;
+            const filter = FILTERS.find(f => f.id === currentLiveFilter);
+            if (filter && filter.apply) return filter.apply(imgData);
+            return imgData;
+        };
+        function renderFrame() {
+            if (!video || video.paused || video.ended || !video.videoWidth) {
+                animationId = requestAnimationFrame(renderFrame);
+                return;
+            }
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            if (currentLiveFilter !== 'original') {
+                const filterObj = FILTERS.find(f => f.id === currentLiveFilter);
+                if (filterObj) imageData = filterObj.apply(imageData);
+            }
+            ctx.putImageData(imageData, 0, 0);
+            animationId = requestAnimationFrame(renderFrame);
         }
-        return;
+        renderFrame();
     }
-    triggerDownload(capturedBlobUrl, `CreNature_${Date.now()}.png`);
-});
-
-// 返回首页：从相机页
-backHomeBtn.addEventListener('click', () => {
-    stopCamera();
-    cameraPage.style.display = 'none';
-    homePage.style.display = 'flex';
-});
-
-// 预览页返回首页
-backFromPreviewBtn.addEventListener('click', () => {
-    stopCamera();
-    if (capturedBlobUrl) {
-        URL.revokeObjectURL(capturedBlobUrl);
-        capturedBlobUrl = null;
+    
+    // 初始化相机 (最高分辨率)
+    async function initCamera() {
+        if (mediaStream) stopTracks();
+        try {
+            const constraints = {
+                video: { facingMode: 'environment', width: { ideal: 3840 }, height: { ideal: 2160 } }
+            };
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            mediaStream = stream;
+            const videoTrack = stream.getVideoTracks()[0];
+            const capabilities = videoTrack.getCapabilities();
+            if (capabilities.width && capabilities.width.max) {
+                try {
+                    await videoTrack.applyConstraints({ width: { exact: capabilities.width.max }, height: { exact: capabilities.height.max } });
+                } catch(e) { console.warn(e); }
+            }
+            videoElem = document.createElement('video');
+            videoElem.srcObject = stream;
+            videoElem.autoplay = true;
+            videoElem.playsInline = true;
+            videoElem.muted = true;
+            await videoElem.play();
+            const liveCanvas = document.getElementById('liveCanvas');
+            liveCanvas.width = videoElem.videoWidth || 1280;
+            liveCanvas.height = videoElem.videoHeight || 720;
+            startCameraFilterLoop();
+            return true;
+        } catch (err) {
+            alert("无法获取摄像头，请确保 HTTPS 环境并授权");
+            return false;
+        }
     }
-    previewPage.style.display = 'none';
-    homePage.style.display = 'flex';
-});
-
-function stopCamera() {
-    if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
-        mediaStream = null;
+    
+    function stopTracks() {
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(t => t.stop());
+            mediaStream = null;
+        }
+        if (animationId) cancelAnimationFrame(animationId);
+        if (videoElem) { videoElem.srcObject = null; }
     }
-    if (video.srcObject) video.srcObject = null;
-}
-
-window.addEventListener('beforeunload', () => {
-    if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
-    if (capturedBlobUrl) URL.revokeObjectURL(capturedBlobUrl);
-});
-
-updateLanguage('en');
+    
+    // 拍照（从liveCanvas截取当前滤镜画面）
+    async function captureFromLive() {
+        const canvas = document.getElementById('liveCanvas');
+        if (!canvas || !canvas.width) return null;
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) return null;
+        const url = URL.createObjectURL(blob);
+        return { url, width: canvas.width, height: canvas.height };
+    }
+    
+    // 页面切换逻辑
+    function showPage(pageId) {
+        document.querySelectorAll('.page').forEach(p => p.classList.add('page-hidden'));
+        document.getElementById(pageId).classList.remove('page-hidden');
+        currentPage = pageId;
+    }
+    
+    // 绘制科技电子树 (透明线框)
+    function drawTechTree(ctx, w, h) {
+        ctx.clearRect(0, 0, w, h);
+        ctx.strokeStyle = 'rgba(100, 255, 180, 0.7)';
+        ctx.lineWidth = 1.8;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = '#0f8';
+        // 树干
+        ctx.beginPath();
+        ctx.moveTo(w*0.5, h*0.75);
+        ctx.lineTo(w*0.5, h*0.45);
+        ctx.stroke();
+        // 树枝分叉
+        for (let angle = -0.8; angle <= 0.8; angle+=0.4) {
+            let xOff = Math.sin(angle) * 40;
+            ctx.beginPath();
+            ctx.moveTo(w*0.5, h*0.55);
+            ctx.lineTo(w*0.5 + xOff, h*0.32);
+            ctx.stroke();
+        }
+        // 电子光晕圆圈
+        for (let i = 0; i < 12; i++) {
+            let rad = 12 + i*3;
+            ctx.beginPath();
+            ctx.arc(w*0.5 + Math.sin(Date.now()*0.002 + i)*6, h*0.35 + Math.cos(i)*12, rad*0.4, 0, Math.PI*2);
+            ctx.strokeStyle = `rgba(80, 220, 160, ${0.3+Math.sin(Date.now()*0.003)*0.1})`;
+            ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.arc(w*0.5, h*0.4, 28, 0, Math.PI*2);
+        ctx.stroke();
+        // 线框叶子
+        for (let i=0;i<7;i++) {
+            let x = w*0.5 + Math.sin(i)*32;
+            let y = h*0.23 + Math.cos(i*1.2)*15;
+            ctx.beginPath();
+            ctx.moveTo(w*0.5, h*0.35);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+    }
+    let treeCanvas = document.getElementById('treeCanvas');
+    let treeCtx = treeCanvas.getContext('2d');
+    function animateTree() {
+        if (treeCanvas && treeCtx) {
+            treeCanvas.width = treeCanvas.clientWidth;
+            treeCanvas.height = treeCanvas.clientHeight;
+            drawTechTree(treeCtx, treeCanvas.width, treeCanvas.height);
+        }
+        requestAnimationFrame(animateTree);
+    }
+    
+    // 渲染实时滤镜栏
+    function renderLiveFilterBar() {
+        const bar = document.getElementById('liveFilterBar');
+        bar.innerHTML = '';
+        FILTERS.forEach(f => {
+            const btn = document.createElement('div');
+            btn.className = 'filter-chip';
+            if (currentLiveFilter === f.id) btn.classList.add('active-filter');
+            btn.innerText = f.name;
+            btn.onclick = () => {
+                currentLiveFilter = f.id;
+                renderLiveFilterBar();
+            };
+            bar.appendChild(btn);
+        });
+    }
+    
+    // 编辑页更新当前滤镜索引并应用
+    let currentEditImageElement = null;
+    async function updateEditFilter() {
+        if (!originalCaptureImageData || !currentEditImageElement) return;
+        const img = currentEditImageElement;
+        const url = await applyFilterToImage(img, currentEditFilterIndex);
+        if (url) {
+            if (photoCapturedBlobUrl) URL.revokeObjectURL(photoCapturedBlobUrl);
+            photoCapturedBlobUrl = url;
+            document.getElementById('editImage').src = url;
+        }
+        document.getElementById('filterNameDisplay').innerHTML = FILTERS[currentEditFilterIndex].name;
+    }
+    
+    async function prepareEditWithOriginalImage(imgUrl) {
+        if (photoCapturedBlobUrl && photoCapturedBlobUrl !== imgUrl) URL.revokeObjectURL(photoCapturedBlobUrl);
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = async () => {
+            currentEditImageElement = img;
+            // 存储原始未滤镜canvas数据用于重新滤镜 (先原图)
+            const w = img.naturalWidth, h = img.naturalHeight;
+            canvasForFilter.width = w; canvasForFilter.height = h;
+            canvasForFilter.getContext('2d').drawImage(img, 0, 0, w, h);
+            const originalData = canvasForFilter.getContext('2d').getImageData(0,0,w,h);
+            originalCaptureImageData = originalData; // 保存原图数据
+            currentEditFilterIndex = 0;
+            await updateEditFilter();
+        };
+        img.src = imgUrl;
+    }
+    
+    // 事件绑定与导航
+    (function bindEvents() {
+        // 唤醒逻辑 (三点轻触)
+        let tapCount = 0;
+        let wakeTimeout;
+        const wakeDiv = document.getElementById('wakeOverlay');
+        const homePageDiv = document.getElementById('homePage');
+        const wakeHandler = () => {
+            tapCount++;
+            document.getElementById(`dot${tapCount}`)?.classList.add('active');
+            if (tapCount === 3) {
+                clearTimeout(wakeTimeout);
+                wakeDiv.style.opacity = '0';
+                setTimeout(() => {
+                    wakeDiv.style.display = 'none';
+                    homePageDiv.classList.remove('page-hidden');
+                    document.getElementById('homeContent').style.opacity = '1';
+                }, 500);
+            } else {
+                clearTimeout(wakeTimeout);
+                wakeTimeout = setTimeout(() => { tapCount = 0; document.querySelectorAll('.dot').forEach(d => d.classList.remove('active')); }, 800);
+            }
+        };
+        wakeDiv.addEventListener('click', wakeHandler);
+        
+        // 首页按钮
+        document.getElementById('storyBtn').onclick = () => { showPage('storyPage'); if(mediaStream) { stopTracks(); } };
+        document.getElementById('cameraModeBtn').onclick = async () => {
+            showPage('cameraLivePage');
+            renderLiveFilterBar();
+            await initCamera();
+        };
+        // 返回按钮
+        document.querySelectorAll('[data-back]').forEach(btn => {
+            btn.onclick = (e) => {
+                const target = btn.getAttribute('data-back');
+                if (target === 'home') { showPage('homePage'); stopTracks(); }
+                if (target === 'camera') { showPage('cameraLivePage'); if(!mediaStream) initCamera(); }
+            };
+        });
+        // 快门拍照
+        document.getElementById('shutterBtn').onclick = async () => {
+            const captured = await captureFromLive();
+            if (captured && captured.url) {
+                stopTracks();
+                showPage('editPage');
+                await prepareEditWithOriginalImage(captured.url);
+            } else alert("拍照失败，请重试");
+        };
+        // 重拍 & 下载
+        document.getElementById('retakeFromEditBtn').onclick = async () => {
+            showPage('cameraLivePage');
+            await initCamera();
+        };
+        document.getElementById('downloadEditBtn').onclick = () => {
+            if (photoCapturedBlobUrl) {
+                const a = document.createElement('a');
+                a.href = photoCapturedBlobUrl;
+                a.download = `CreNature_${Date.now()}.png`;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => document.body.removeChild(a), 200);
+            } else alert("无照片可下载");
+        };
+        // 左右滑动滤镜
+        document.getElementById('prevFilterBtn').onclick = () => {
+            if (!originalCaptureImageData) return;
+            currentEditFilterIndex = (currentEditFilterIndex - 1 + FILTERS.length) % FILTERS.length;
+            updateEditFilter();
+        };
+        document.getElementById('nextFilterBtn').onclick = () => {
+            if (!originalCaptureImageData) return;
+            currentEditFilterIndex = (currentEditFilterIndex + 1) % FILTERS.length;
+            updateEditFilter();
+        };
+    })();
+    
+    animateTree();
+    // 初始只显示唤醒遮罩，首页先隐藏
+    document.getElementById('homePage').classList.add('page-hidden');
+    document.getElementById('storyPage').classList.add('page-hidden');
+    document.getElementById('cameraLivePage').classList.add('page-hidden');
+    document.getElementById('editPage').classList.add('page-hidden');
 </script>
 </body>
 </html>
