@@ -10,7 +10,6 @@
             padding: 0;
             box-sizing: border-box;
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
-            /* 禁止选中 / 禁止长按复制 */
             -webkit-user-select: none;
             user-select: none;
             -webkit-touch-callout: none;
@@ -29,7 +28,6 @@
             background: #000;
             color: #fff;
             min-height: 100vh;
-            /* 完全锁死，不滑动、不被遮挡 */
             overflow: hidden;
             position: fixed;
             inset: 0;
@@ -39,7 +37,20 @@
             padding-right: env(safe-area-inset-right);
         }
 
-        /* 语言切换按钮（全局右上角） */
+        /* 全局按钮按下的白底黑字特效 */
+        .lang-btn:active,
+        .btn:active,
+        .back-btn:active,
+        .shutter-btn:active {
+            background: white !important;
+            color: black !important;
+            border-color: white !important;
+        }
+        .shutter-btn:active {
+            transform: translateX(-50%) scale(0.94);
+        }
+
+        /* 语言切换按钮 */
         .lang-btn {
             position: fixed;
             top: max(30px, env(safe-area-inset-top) + 10px);
@@ -55,21 +66,8 @@
             cursor: pointer;
             transition: all 0.08s linear;
         }
-        /* 所有按钮按下特效：白底黑字 */
-        .lang-btn:active,
-        .btn:active,
-        .back-btn:active,
-        .shutter-btn:active {
-            background: white !important;
-            color: black !important;
-            border-color: white !important;
-        }
-        .shutter-btn:active {
-            transform: translateX(-50%) scale(0.96);
-            background: white !important;
-        }
 
-        /* 首页 - 增强底部安全区域，避免系统应用栏遮挡 */
+        /* 首页 */
         .home-wrap {
             width: 100%;
             height: 100%;
@@ -78,9 +76,9 @@
             align-items: center;
             justify-content: center;
             gap: 30px;
-            padding-bottom: max(20px, env(safe-area-inset-bottom));
+            padding-bottom: max(30px, env(safe-area-inset-bottom));
         }
-        
+
         .btn {
             width: 220px;
             padding: 16px 0;
@@ -130,10 +128,10 @@
             transition: all 0.08s linear;
         }
         
-        /* 快门按钮 - 始终避开底部应用栏，使用充足安全区 */
+        /* 快门按钮 - 确保远离底部应用栏 */
         .shutter-btn {
             position: absolute;
-            bottom: max(90px, calc(env(safe-area-inset-bottom) + 60px));
+            bottom: max(90px, calc(env(safe-area-inset-bottom) + 65px));
             left: 50%;
             transform: translateX(-50%);
             width: 72px;
@@ -146,13 +144,8 @@
             backdrop-filter: blur(4px);
             transition: all 0.08s linear;
         }
-        .shutter-btn:active {
-            background: white !important;
-            border-color: white !important;
-            transform: translateX(-50%) scale(0.94);
-        }
 
-        /* 预览照片页面 —— 完全杜绝滚动，所有内容适应一屏，不溢出，无滑动条 */
+        /* ========= 预览页面 - 彻底解决底部应用栏遮挡 ========= */
         .preview-wrap {
             width: 100%;
             height: 100%;
@@ -160,68 +153,80 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 28px;
-            padding-top: max(70px, env(safe-area-inset-top) + 15px);
-            padding-bottom: max(35px, calc(env(safe-area-inset-bottom) + 30px));
-            padding-left: 20px;
-            padding-right: 20px;
             background: #000;
             position: relative;
-            overflow: hidden;        /* 禁止滚动，所有内容强制显示在一屏内 */
+            overflow: hidden;      /* 禁止任何滚动 */
+            padding: 0 20px;
+            /* 关键：增大底部内边距，确保按钮完全高于应用栏 */
+            padding-top: max(70px, env(safe-area-inset-top) + 20px);
+            padding-bottom: max(70px, calc(env(safe-area-inset-bottom) + 85px));
             box-sizing: border-box;
         }
         
+        /* 预览图片 - 限制最大高度，确保按钮区域不被挤压 */
         .preview-img {
-            max-width: 82%;
-            max-height: 55vh;        /* 限制最大高度，确保按钮组可见 */
+            max-width: 90%;
+            max-height: 50vh;
             width: auto;
             height: auto;
             border-radius: 24px;
             border: 1px solid rgba(255,255,255,0.2);
             object-fit: contain;
             box-shadow: 0 12px 30px rgba(0,0,0,0.5);
-            flex-shrink: 1;
+            flex-shrink: 0;
+            margin-bottom: 24px;
         }
         
+        /* 按钮区域 - 使用flex列，居中对齐，不受底部影响 */
         .preview-buttons {
             display: flex;
             flex-direction: column;
             gap: 20px;
             width: 100%;
             align-items: center;
-            margin-top: 8px;
             flex-shrink: 0;
+            margin: 0;
         }
         
         .preview-buttons .btn {
-            width: 220px;
+            width: 240px;
         }
         
-        /* 预览页面左上角返回按钮 (独立定位，不影响布局流) */
+        /* 预览页左上角返回按钮固定定位，避免被覆盖 */
         .preview-wrap .back-btn {
             position: fixed;
             top: max(30px, env(safe-area-inset-top) + 10px);
             left: 20px;
             z-index: 20;
         }
+        
+        /* 极小屏幕适配：图片适当再缩小，确保所有按钮可见 */
+        @media (max-width: 480px) and (max-height: 700px) {
+            .preview-img {
+                max-height: 42vh;
+                margin-bottom: 16px;
+            }
+            .preview-buttons {
+                gap: 15px;
+            }
+            .preview-wrap {
+                padding-bottom: max(70px, calc(env(safe-area-inset-bottom) + 80px));
+            }
+        }
+        
+        /* 针对较矮屏幕（如折叠屏）额外增强 */
+        @media (max-height: 600px) {
+            .preview-img {
+                max-height: 38vh;
+            }
+            .preview-buttons .btn {
+                padding: 12px 0;
+                width: 210px;
+            }
+        }
 
         #captureCanvas {
             display: none;
-        }
-        
-        /* 极小屏幕适配: 图片比例微调，依然无滚动 */
-        @media (max-width: 480px) and (max-height: 680px) {
-            .preview-img {
-                max-height: 48vh;
-            }
-            .preview-buttons {
-                gap: 14px;
-            }
-            .shutter-btn {
-                width: 64px;
-                height: 64px;
-                bottom: max(80px, calc(env(safe-area-inset-bottom) + 50px));
-            }
         }
     </style>
 </head>
@@ -242,7 +247,7 @@
     <button class="shutter-btn" id="shutterBtn"></button>
 </div>
 
-<!-- 照片预览页面（无滚动，一屏显示完整，同时修复移动端下载） -->
+<!-- 照片预览页面（无滚动，底部按钮完全显示） -->
 <div class="preview-wrap" id="previewPage">
     <img class="preview-img" id="previewImg" alt="Preview Photo">
     <div class="preview-buttons">
@@ -297,8 +302,7 @@ const ctx = canvas.getContext('2d');
 const previewImg = document.getElementById('previewImg');
 
 let mediaStream = null;
-let capturedBlobUrl = null;      // 存储最新拍摄图片的blob URL，用于下载
-let currentImageData = null;     // 保留canvas的base64备用，但下载用blob更可靠
+let capturedBlobUrl = null;      // 存储blob URL用于下载
 
 // 语言切换
 function updateLanguage(lang) {
@@ -320,7 +324,6 @@ langToggleBtn.addEventListener('click', () => {
 // 进入相机
 enterCameraBtn.addEventListener('click', async () => {
     try {
-        // 请求后置摄像头最佳分辨率
         mediaStream = await navigator.mediaDevices.getUserMedia({
             video: {
                 facingMode: 'environment',
@@ -330,13 +333,9 @@ enterCameraBtn.addEventListener('click', async () => {
             audio: false
         });
         video.srcObject = mediaStream;
-        // 确保视频流已加载
         await new Promise((resolve) => {
-            if (video.readyState >= 2) {
-                resolve();
-            } else {
-                video.onloadeddata = () => resolve();
-            }
+            if (video.readyState >= 2) resolve();
+            else video.onloadeddata = () => resolve();
         });
         homePage.style.display = 'none';
         cameraPage.style.display = 'block';
@@ -346,46 +345,33 @@ enterCameraBtn.addEventListener('click', async () => {
     }
 });
 
-// 拍照核心逻辑 (捕获图片，生成预览和blob下载资源)
-function capturePhoto() {
-    if (!video.videoWidth || !video.videoHeight) {
-        console.warn("video metadata not ready");
-        return false;
-    }
+// 拍照：生成 blob 和预览图
+async function capturePhoto() {
+    if (!video.videoWidth || !video.videoHeight) return false;
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     
-    // 生成预览用的 base64 (保留)
     const previewDataUrl = canvas.toDataURL('image/png');
     previewImg.src = previewDataUrl;
     
-    // 释放旧的 blob URL 避免内存泄漏
-    if (capturedBlobUrl) {
-        URL.revokeObjectURL(capturedBlobUrl);
-        capturedBlobUrl = null;
-    }
+    if (capturedBlobUrl) URL.revokeObjectURL(capturedBlobUrl);
     
-    // 重要：为了移动端（iPhone/iPad）能够正常下载，将 canvas 转为 Blob 并生成临时对象URL
-    // 这是最可靠的跨平台下载方案（支持 Safari iOS）
     return new Promise((resolve) => {
         canvas.toBlob((blob) => {
             if (blob) {
                 capturedBlobUrl = URL.createObjectURL(blob);
                 resolve(true);
             } else {
-                // 降级使用 base64 作为后备
-                capturedBlobUrl = previewDataUrl;
+                capturedBlobUrl = previewDataUrl; // 降级
                 resolve(true);
             }
         }, 'image/png');
     });
 }
 
-// 快门按钮点击：拍照并跳转预览
 shutterBtn.addEventListener('click', async () => {
-    if (!video.videoWidth || !video.videoHeight) {
-        // 极少数情况视频未准备好，延迟重试
+    if (!video.videoWidth) {
         await new Promise(r => setTimeout(r, 80));
         if (!video.videoWidth) return;
     }
@@ -396,61 +382,56 @@ shutterBtn.addEventListener('click', async () => {
     }
 });
 
-// 重拍: 返回相机
+// 重拍
 reTakeBtn.addEventListener('click', () => {
     previewPage.style.display = 'none';
     cameraPage.style.display = 'block';
-    // 确保相机视频流依然活动
     if (mediaStream && mediaStream.active && video.srcObject) {
         video.play().catch(e => console.warn);
     }
 });
 
-// 下载照片 —— 完美支持手机/iPad/电脑 (使用blob URL)
+// 下载：完美支持 iPhone/iPad/Android/电脑
+function triggerDownload(url, filename) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => document.body.removeChild(link), 200);
+}
+
 downloadBtn.addEventListener('click', () => {
     if (!capturedBlobUrl) {
-        // 如果因某种原因丢失，重新从canvas生成blob
-        if (canvas.width > 0 && canvas.height > 0) {
+        // 如果没有捕获的图片，尝试从当前 canvas 重新生成
+        if (canvas.width && canvas.height) {
             canvas.toBlob((blob) => {
                 if (blob) {
                     const tempUrl = URL.createObjectURL(blob);
-                    triggerDownload(tempUrl);
-                    setTimeout(() => URL.revokeObjectURL(tempUrl), 200);
+                    triggerDownload(tempUrl, `CreNature_${Date.now()}.png`);
+                    setTimeout(() => URL.revokeObjectURL(tempUrl), 300);
                 } else {
-                    alert("Unable to generate photo, please retake.");
+                    alert("Photo not ready, please retake.");
                 }
             }, 'image/png');
         } else {
-            alert("Photo not available, please retake.");
+            alert("No photo captured. Please take a photo first.");
         }
         return;
     }
-    triggerDownload(capturedBlobUrl);
+    triggerDownload(capturedBlobUrl, `CreNature_${Date.now()}.png`);
 });
 
-// 通用下载触发函数 (兼容移动端)
-function triggerDownload(url) {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `CreNature_${Date.now()}.png`;
-    document.body.appendChild(link);
-    link.click();
-    setTimeout(() => {
-        document.body.removeChild(link);
-    }, 150);
-}
-
-// 返回首页（从相机页）
+// 返回首页（相机页）
 backHomeBtn.addEventListener('click', () => {
     stopCamera();
     cameraPage.style.display = 'none';
     homePage.style.display = 'flex';
 });
 
-// 从预览页返回首页（释放相机资源并回到首页）
+// 预览页返回首页
 backFromPreviewBtn.addEventListener('click', () => {
     stopCamera();
-    // 清理 blob URL 避免残留
     if (capturedBlobUrl) {
         URL.revokeObjectURL(capturedBlobUrl);
         capturedBlobUrl = null;
@@ -459,33 +440,20 @@ backFromPreviewBtn.addEventListener('click', () => {
     homePage.style.display = 'flex';
 });
 
-// 统一停止相机并释放资源
 function stopCamera() {
     if (mediaStream) {
         mediaStream.getTracks().forEach(track => track.stop());
         mediaStream = null;
     }
-    if (video.srcObject) {
-        video.srcObject = null;
-    }
+    if (video.srcObject) video.srcObject = null;
 }
 
-// 页面彻底卸载前清理资源
 window.addEventListener('beforeunload', () => {
-    if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
-    }
-    if (capturedBlobUrl) {
-        URL.revokeObjectURL(capturedBlobUrl);
-    }
+    if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+    if (capturedBlobUrl) URL.revokeObjectURL(capturedBlobUrl);
 });
 
-// 初始化语言
 updateLanguage('en');
-
-// 额外处理安全区导致内容极端紧凑的情况：确保预览页在任何手机尺寸下都不会溢出产生滚动条
-// （强制body和preview-wrap overflow hidden，且内容高度自适应）
-// 如果因某些浏览器导致图片被裁切，CSS 已经做了充分约束，所有内容保持可见
 </script>
 </body>
 </html>
