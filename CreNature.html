@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -31,7 +31,6 @@
             padding-bottom: env(safe-area-inset-bottom);
         }
 
-        /* 首页 */
         .home-wrap {
             width: 100%;
             height: 100%;
@@ -81,7 +80,6 @@
             color: black !important;
         }
 
-        /* 相机页面 */
         .camera-wrap {
             width: 100%;
             height: 100%;
@@ -114,7 +112,6 @@
             color: black !important;
         }
         
-        /* 拍照按钮 */
         .shutter-btn {
             position: absolute;
             bottom: max(30px, env(safe-area-inset-bottom) + 20px);
@@ -132,7 +129,6 @@
             background: white;
         }
         
-        /* 录像按钮 */
         .video-record-btn {
             position: absolute;
             bottom: max(30px, env(safe-area-inset-bottom) + 20px);
@@ -153,7 +149,6 @@
             transform: scale(0.94);
         }
 
-        /* 录像计时器 */
         .record-timer {
             position: absolute;
             top: max(70px, env(safe-area-inset-top) + 50px);
@@ -174,7 +169,6 @@
             display: block;
         }
 
-        /* 预览页面 */
         .preview-wrap {
             width: 100%;
             height: 100%;
@@ -194,6 +188,15 @@
             border: 1px solid rgba(255,255,255,0.2);
             object-fit: contain;
             margin-bottom: 20px;
+            display: none;
+        }
+        
+        .preview-video {
+            max-width: 90%;
+            max-height: 55vh;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            display: none;
         }
         
         .filter-scroll-container {
@@ -302,13 +305,11 @@
 
 <button class="lang-btn" id="langToggleBtn">English</button>
 
-<!-- 首页 -->
 <div class="home-wrap" id="homePage">
     <button class="btn" id="enterCameraBtn">📷 进入相机</button>
     <button class="btn" id="introBtn" disabled>📖 项目介绍 (即将开放)</button>
 </div>
 
-<!-- 相机页面 -->
 <div class="camera-wrap" id="cameraPage">
     <video id="video" autoplay playsinline muted></video>
     <div class="record-timer" id="recordTimer">⏺ 0.0s</div>
@@ -317,9 +318,9 @@
     <button class="video-record-btn" id="videoRecordBtn">🎥</button>
 </div>
 
-<!-- 预览页面 -->
 <div class="preview-wrap" id="previewPage">
-    <img class="preview-img" id="previewImg" alt="Preview" style="display: none;">
+    <img class="preview-img" id="previewImg" alt="Preview">
+    <video class="preview-video" id="previewVideo" controls></video>
     
     <div class="filter-scroll-container" id="filterScroll">
         <div class="filter-track" id="filterTrack"></div>
@@ -337,7 +338,6 @@
     <button class="back-btn" id="backFromPreviewBtn">← 返回</button>
 </div>
 
-<!-- 处理中遮罩 -->
 <div class="processing-overlay" id="processingOverlay">
     <div class="processing-spinner"></div>
     <div class="processing-text" id="processingText">处理中...</div>
@@ -349,7 +349,6 @@
 <canvas id="captureCanvas" style="display: none;"></canvas>
 
 <script>
-// ==================== 语言配置 ====================
 const i18n = {
     en: {
         enterCamera: "📷 Enter Camera",
@@ -385,8 +384,10 @@ let recordedChunks = [];
 let recordingStartTime = 0;
 let recordingTimerInterval = null;
 
-// 预览相关
-let originalImageBlob = null;
+// 媒体类型区分
+let currentMediaType = null; // 'photo' or 'video'
+let originalPhotoBlob = null;
+let originalVideoBlob = null;
 let currentFilterIndex = 0;
 let glowEnabled = false;
 let filterItems = [];
@@ -396,59 +397,40 @@ const homePage = document.getElementById('homePage');
 const cameraPage = document.getElementById('cameraPage');
 const previewPage = document.getElementById('previewPage');
 const video = document.getElementById('video');
-const enterCameraBtn = document.getElementById('enterCameraBtn');
-const backHomeBtn = document.getElementById('backHomeBtn');
-const shutterBtn = document.getElementById('shutterBtn');
-const videoRecordBtn = document.getElementById('videoRecordBtn');
-const recordTimer = document.getElementById('recordTimer');
 const previewImg = document.getElementById('previewImg');
+const previewVideo = document.getElementById('previewVideo');
 const filterTrack = document.getElementById('filterTrack');
 const glowToggle = document.getElementById('glowToggle');
 const glowLabel = document.getElementById('glowLabel');
-const reTakeBtn = document.getElementById('reTakeBtn');
-const downloadBtn = document.getElementById('downloadBtn');
-const backFromPreviewBtn = document.getElementById('backFromPreviewBtn');
-const processingOverlay = document.getElementById('processingOverlay');
-const processingText = document.getElementById('processingText');
-const progressBar = document.getElementById('progressBar');
+const recordTimer = document.getElementById('recordTimer');
 const langToggleBtn = document.getElementById('langToggleBtn');
-const introBtn = document.getElementById('introBtn');
 const canvas = document.getElementById('captureCanvas');
 const ctx = canvas.getContext('2d');
 
-// ==================== 更新UI文字 ====================
 function updateUI() {
     const t = i18n[currentLang];
-    enterCameraBtn.textContent = t.enterCamera;
-    introBtn.textContent = t.intro;
-    backHomeBtn.textContent = t.back;
-    backFromPreviewBtn.textContent = t.back;
-    reTakeBtn.textContent = t.retake;
-    downloadBtn.textContent = t.download;
+    document.getElementById('enterCameraBtn').textContent = t.enterCamera;
+    document.getElementById('introBtn').textContent = t.intro;
+    document.getElementById('backHomeBtn').textContent = t.back;
+    document.getElementById('backFromPreviewBtn').textContent = t.back;
+    document.getElementById('reTakeBtn').textContent = t.retake;
+    document.getElementById('downloadBtn').textContent = t.download;
     glowLabel.textContent = t.glow;
     langToggleBtn.textContent = currentLang === "zh" ? "English" : "中文";
-    
-    if (filterItems.length > 0) {
-        buildFilterUI();
-    }
+    if (filterItems.length) buildFilterUI();
 }
 
-// ==================== 获取最高分辨率相机 ====================
+// 强制使用后置摄像头，最高分辨率
 async function initCamera() {
     try {
         if (mediaStream) {
             mediaStream.getTracks().forEach(track => track.stop());
         }
         
-        // 优先使用后置摄像头最高分辨率
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(d => d.kind === 'videoinput');
-        let backCamera = videoDevices.find(d => d.label.toLowerCase().includes('back') || 
-                                                   d.label.toLowerCase().includes('rear'));
-        
+        // 直接使用后置摄像头约束
         const constraints = {
             video: {
-                deviceId: backCamera ? { exact: backCamera.deviceId } : { facingMode: 'environment' },
+                facingMode: { exact: "environment" },
                 width: { ideal: 3840 },
                 height: { ideal: 2160 }
             }
@@ -458,11 +440,9 @@ async function initCamera() {
         video.srcObject = mediaStream;
         await video.play();
         
-        // 获取实际分辨率
         const track = mediaStream.getVideoTracks()[0];
         const settings = track.getSettings();
-        console.log("Camera resolution:", settings.width, "x", settings.height);
-        
+        console.log("后置摄像头分辨率:", settings.width, "x", settings.height);
         return true;
     } catch (err) {
         console.error("Camera error:", err);
@@ -471,7 +451,7 @@ async function initCamera() {
     }
 }
 
-// ==================== 拍照 ====================
+// 拍照
 async function takePhoto() {
     if (!video.videoWidth) return;
     
@@ -481,11 +461,13 @@ async function takePhoto() {
     
     canvas.toBlob(async (blob) => {
         if (blob) {
-            originalImageBlob = blob;
+            currentMediaType = 'photo';
+            originalPhotoBlob = blob;
+            originalVideoBlob = null;
             currentFilterIndex = 0;
             glowEnabled = false;
             glowToggle.classList.remove('active');
-            await applyFilterToImage();
+            await applyFilterToPhoto();
             
             cameraPage.style.display = 'none';
             previewPage.style.display = 'flex';
@@ -493,12 +475,12 @@ async function takePhoto() {
     }, 'image/jpeg', 0.95);
 }
 
-// ==================== 应用滤镜到图片 ====================
-async function applyFilterToImage() {
-    if (!originalImageBlob) return;
+// 应用滤镜到照片
+async function applyFilterToPhoto() {
+    if (!originalPhotoBlob) return;
     
     const img = new Image();
-    const url = URL.createObjectURL(originalImageBlob);
+    const url = URL.createObjectURL(originalPhotoBlob);
     
     return new Promise((resolve) => {
         img.onload = () => {
@@ -513,7 +495,6 @@ async function applyFilterToImage() {
             imageData = applyFilter(imageData, currentFilterIndex);
             
             if (glowEnabled) {
-                // 散光效果
                 const glowCanvas = document.createElement('canvas');
                 glowCanvas.width = w;
                 glowCanvas.height = h;
@@ -537,6 +518,7 @@ async function applyFilterToImage() {
                     const previewUrl = URL.createObjectURL(blob);
                     previewImg.src = previewUrl;
                     previewImg.style.display = 'block';
+                    previewVideo.style.display = 'none';
                 }
                 URL.revokeObjectURL(url);
                 resolve();
@@ -544,6 +526,42 @@ async function applyFilterToImage() {
         };
         img.src = url;
     });
+}
+
+// 应用滤镜到视频帧（仅预览，不保存滤镜后视频）
+function applyFilterToVideoFrame(videoElement, canvasElement, filterIndex, withGlow) {
+    const w = videoElement.videoWidth;
+    const h = videoElement.videoHeight;
+    if (w === 0) return;
+    
+    canvasElement.width = w;
+    canvasElement.height = h;
+    const ctx = canvasElement.getContext('2d');
+    ctx.drawImage(videoElement, 0, 0, w, h);
+    
+    let imageData = ctx.getImageData(0, 0, w, h);
+    imageData = applyFilter(imageData, filterIndex);
+    
+    if (withGlow) {
+        const glowCanvas = document.createElement('canvas');
+        glowCanvas.width = w;
+        glowCanvas.height = h;
+        const glowCtx = glowCanvas.getContext('2d');
+        glowCtx.putImageData(imageData, 0, 0);
+        glowCtx.filter = 'blur(5px)';
+        glowCtx.drawImage(canvasElement, 0, 0);
+        glowCtx.filter = 'none';
+        const blurredData = glowCtx.getImageData(0, 0, w, h);
+        
+        for (let i = 0; i < imageData.data.length; i += 4) {
+            imageData.data[i] = Math.min(255, imageData.data[i] * 0.7 + blurredData.data[i] * 0.5);
+            imageData.data[i+1] = Math.min(255, imageData.data[i+1] * 0.7 + blurredData.data[i+1] * 0.5);
+            imageData.data[i+2] = Math.min(255, imageData.data[i+2] * 0.7 + blurredData.data[i+2] * 0.5);
+        }
+    }
+    
+    ctx.putImageData(imageData, 0, 0);
+    return canvasElement;
 }
 
 function applyFilter(imageData, index) {
@@ -595,7 +613,7 @@ function applyFilter(imageData, index) {
     return imageData;
 }
 
-// ==================== 录像功能 ====================
+// 录像功能
 async function startRecording() {
     if (!mediaStream) return;
     
@@ -609,12 +627,14 @@ async function startRecording() {
     
     mediaRecorder.onstop = async () => {
         const videoBlob = new Blob(recordedChunks, { type: 'video/mp4' });
-        originalImageBlob = videoBlob;
+        currentMediaType = 'video';
+        originalVideoBlob = videoBlob;
+        originalPhotoBlob = null;
         
-        // 模拟视频处理（实际项目可扩展视频滤镜）
         const url = URL.createObjectURL(videoBlob);
-        previewImg.src = url;
-        previewImg.style.display = 'block';
+        previewVideo.src = url;
+        previewVideo.style.display = 'block';
+        previewImg.style.display = 'none';
         
         cameraPage.style.display = 'none';
         previewPage.style.display = 'flex';
@@ -628,7 +648,6 @@ async function startRecording() {
     recordingStartTime = Date.now();
     startRecordingTimer();
     
-    // 3秒后自动停止
     setTimeout(() => {
         if (isRecording) stopRecording();
     }, 3000);
@@ -663,7 +682,7 @@ function stopRecordingTimer() {
     recordTimer.classList.remove('show');
 }
 
-// ==================== 滤镜UI ====================
+// 构建滤镜UI
 function buildFilterUI() {
     const filters = i18n[currentLang].filters;
     filterTrack.innerHTML = '';
@@ -680,14 +699,20 @@ function buildFilterUI() {
                 if (i === idx) item.classList.add('active');
                 else item.classList.remove('active');
             });
-            applyFilterToImage();
+            // 根据媒体类型刷新预览
+            if (currentMediaType === 'photo' && originalPhotoBlob) {
+                applyFilterToPhoto();
+            } else if (currentMediaType === 'video' && originalVideoBlob) {
+                // 视频不需要重新处理，保持原样
+                console.log("视频滤镜切换仅影响照片，视频保持原样");
+            }
         };
         filterTrack.appendChild(div);
         filterItems.push(div);
     });
 }
 
-// ==================== 页面切换 ====================
+// 页面切换
 async function goToCamera() {
     const success = await initCamera();
     if (success) {
@@ -710,48 +735,56 @@ function goToHome() {
 function backToCamera() {
     previewPage.style.display = 'none';
     cameraPage.style.display = 'block';
-    originalImageBlob = null;
+    originalPhotoBlob = null;
+    originalVideoBlob = null;
 }
 
-// ==================== 下载 ====================
-function downloadPhoto() {
-    if (previewImg.src && previewImg.src.startsWith('blob:')) {
+// 下载 - 根据类型选择格式
+function downloadMedia() {
+    if (currentMediaType === 'photo' && previewImg.src && previewImg.src.startsWith('blob:')) {
         const a = document.createElement('a');
         a.href = previewImg.src;
         a.download = `CreNature_${Date.now()}.jpg`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+    } else if (currentMediaType === 'video' && originalVideoBlob) {
+        const url = URL.createObjectURL(originalVideoBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `CreNature_${Date.now()}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 100);
     }
 }
 
-// ==================== 语言切换 ====================
 function toggleLang() {
     currentLang = currentLang === "zh" ? "en" : "zh";
     updateUI();
 }
 
-// ==================== 事件绑定 ====================
-enterCameraBtn.onclick = goToCamera;
-backHomeBtn.onclick = goToHome;
-backFromPreviewBtn.onclick = backToCamera;
-shutterBtn.onclick = takePhoto;
-videoRecordBtn.onclick = () => {
+// 事件绑定
+document.getElementById('enterCameraBtn').onclick = goToCamera;
+document.getElementById('backHomeBtn').onclick = goToHome;
+document.getElementById('backFromPreviewBtn').onclick = backToCamera;
+document.getElementById('shutterBtn').onclick = takePhoto;
+document.getElementById('videoRecordBtn').onclick = () => {
     if (isRecording) stopRecording();
     else startRecording();
 };
-reTakeBtn.onclick = backToCamera;
-downloadBtn.onclick = downloadPhoto;
+document.getElementById('reTakeBtn').onclick = backToCamera;
+document.getElementById('downloadBtn').onclick = downloadMedia;
 langToggleBtn.onclick = toggleLang;
 
 glowToggle.onclick = () => {
     glowEnabled = !glowEnabled;
     if (glowEnabled) glowToggle.classList.add('active');
     else glowToggle.classList.remove('active');
-    applyFilterToImage();
+    if (currentMediaType === 'photo') applyFilterToPhoto();
 };
 
-// ==================== 初始化 ====================
 updateUI();
 buildFilterUI();
 homePage.style.display = 'flex';
