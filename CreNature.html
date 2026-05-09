@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CreNature - 高清相机 & 滑动滤镜</title>
+    <title>CreNature - 高清相机 & 滑动滤镜 + 散光模式</title>
     <style>
         * {
             margin: 0;
@@ -42,7 +42,8 @@
         .btn:active,
         .back-btn:active,
         .shutter-btn:active,
-        .filter-item:active {
+        .filter-item:active,
+        .glow-toggle:active {
             background: white !important;
             color: black !important;
             border-color: white !important;
@@ -185,8 +186,8 @@
             -webkit-overflow-scrolling: touch;
             white-space: nowrap;
             padding: 12px 0;
-            margin: 8px 0 20px;
-            scrollbar-width: none; /* 隐藏滚动条但保留功能 */
+            margin: 8px 0 12px;
+            scrollbar-width: none;
         }
         .filter-scroll-container::-webkit-scrollbar {
             display: none;
@@ -194,7 +195,7 @@
         .filter-track {
             display: inline-flex;
             gap: 20px;
-            padding: 0 calc(50% - 70px); /* 让第一项和最后一项也能居中，70px是单个选项宽度的一半 */
+            padding: 0 calc(50% - 70px);
         }
         .filter-item {
             display: inline-flex;
@@ -220,6 +221,38 @@
             transform: scale(1.02);
             box-shadow: 0 0 12px rgba(255,255,255,0.4);
             font-weight: 600;
+        }
+        
+        /* 散光模式开关 */
+        .glow-mode-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 8px 0 20px;
+        }
+        .glow-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(12px);
+            border-radius: 60px;
+            padding: 8px 20px;
+            border: 1px solid rgba(255,255,255,0.25);
+            cursor: pointer;
+            transition: 0.08s linear;
+        }
+        .glow-toggle span:first-child {
+            font-size: 18px;
+        }
+        .glow-toggle span:last-child {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .glow-toggle.active {
+            background: rgba(255,255,255,0.25);
+            border-color: white;
         }
         
         .preview-buttons {
@@ -256,6 +289,9 @@
             .filter-track {
                 padding: 0 calc(50% - 60px);
             }
+            .glow-toggle {
+                padding: 6px 16px;
+            }
         }
 
         #captureCanvas {
@@ -280,13 +316,21 @@
     <button class="shutter-btn" id="shutterBtn"></button>
 </div>
 
-<!-- 预览页面（新增横向滑动滤镜栏） -->
+<!-- 预览页面（新增横向滑动滤镜栏 + 散光模式开关） -->
 <div class="preview-wrap" id="previewPage">
     <img class="preview-img" id="previewImg" alt="Preview Photo">
     
     <!-- 横向滑动滤镜选择器 -->
     <div class="filter-scroll-container" id="filterScroll">
         <div class="filter-track" id="filterTrack"></div>
+    </div>
+    
+    <!-- 散光模式开关 -->
+    <div class="glow-mode-container">
+        <div class="glow-toggle" id="glowToggle">
+            <span>✨</span>
+            <span id="glowLabel">散光模式</span>
+        </div>
     </div>
     
     <div class="preview-buttons">
@@ -307,7 +351,8 @@ const i18n = {
         reTakeBtn: "Retake Photo",
         downloadBtn: "Download Photo",
         alertPermission: "Please allow camera permission and open with HTTPS/localhost",
-        filters: ["Original", "Soft Mint", "Dusty Pink", "Cool White", "Morandi", "Amber Glow", "Lavender Haze"]
+        filters: ["Original", "Soft Mint", "Dusty Pink", "Cool White", "Morandi", "Amber Glow", "Lavender Haze"],
+        glowMode: "Glow Mode"
     },
     zh: {
         introBtn: "项目简介模式（暂未开放）",
@@ -316,7 +361,8 @@ const i18n = {
         reTakeBtn: "重新拍照",
         downloadBtn: "下载照片",
         alertPermission: "请允许摄像头权限，并使用HTTPS/localhost打开",
-        filters: ["原色", "浅绿散光", "浅粉散光", "柔白冷调", "莫兰迪", "琥珀暖光", "紫罗兰雾"]
+        filters: ["原色", "浅绿散光", "浅粉散光", "柔白冷调", "莫兰迪", "琥珀暖光", "紫罗兰雾"],
+        glowMode: "散光模式"
     }
 };
 
@@ -327,6 +373,8 @@ const cameraPage = document.getElementById('cameraPage');
 const previewPage = document.getElementById('previewPage');
 const filterTrack = document.getElementById('filterTrack');
 const filterScrollContainer = document.getElementById('filterScroll');
+const glowToggle = document.getElementById('glowToggle');
+const glowLabel = document.getElementById('glowLabel');
 
 const introBtn = document.getElementById('introBtn');
 const enterCameraBtn = document.getElementById('enterCameraBtn');
@@ -348,6 +396,7 @@ let originalImageBlob = null;       // 原始拍照图片blob
 let originalImageElement = null;    // 原始图片元素
 let currentFilterIndex = 0;         // 0-6
 let filterItems = [];               // DOM元素数组
+let glowEnabled = false;            // 散光模式开关状态
 
 // ---------- 滤镜算法 (保持不变) ----------
 function applyOriginalFilter(imgData) { return imgData; }
@@ -427,20 +476,54 @@ function getFilterByIndex(index) {
     }
 }
 
-// 应用滤镜并更新预览图
-async function applyFilterAndUpdate(filterIndex) {
+// 应用滤镜 + 可选散光效果（保留清晰主体）
+async function applyFilterAndUpdate(filterIndex, withGlow = glowEnabled) {
     if (!originalImageElement || !originalImageElement.complete) return false;
     const img = originalImageElement;
-    const offCanvas = document.createElement('canvas');
-    offCanvas.width = img.naturalWidth;
-    offCanvas.height = img.naturalHeight;
-    const offCtx = offCanvas.getContext('2d');
-    offCtx.drawImage(img, 0, 0);
-    let imageData = offCtx.getImageData(0, 0, offCanvas.width, offCanvas.height);
+    const width = img.naturalWidth;
+    const height = img.naturalHeight;
+    
+    // 第一步：应用滤镜
+    const filterCanvas = document.createElement('canvas');
+    filterCanvas.width = width;
+    filterCanvas.height = height;
+    const filterCtx = filterCanvas.getContext('2d');
+    filterCtx.drawImage(img, 0, 0);
+    let imageData = filterCtx.getImageData(0, 0, width, height);
     imageData = getFilterByIndex(filterIndex)(imageData);
-    offCtx.putImageData(imageData, 0, 0);
+    filterCtx.putImageData(imageData, 0, 0);
+    
+    let finalCanvas = filterCanvas;
+    
+    // 第二步：如果需要散光效果，叠加光晕（保持细节清晰）
+    if (withGlow) {
+        // 创建光晕层：复制滤镜后的图像，轻微高斯模糊，然后以 screen 方式混合
+        const glowCanvas = document.createElement('canvas');
+        glowCanvas.width = width;
+        glowCanvas.height = height;
+        const glowCtx = glowCanvas.getContext('2d');
+        glowCtx.drawImage(filterCanvas, 0, 0);
+        // 应用轻微模糊产生散光感
+        glowCtx.filter = 'blur(6px)';
+        glowCtx.drawImage(filterCanvas, 0, 0);
+        glowCtx.filter = 'none';
+        
+        // 将模糊层与原滤镜层以 screen (减淡) 模式混合，透明度控制强度
+        finalCanvas = document.createElement('canvas');
+        finalCanvas.width = width;
+        finalCanvas.height = height;
+        const finalCtx = finalCanvas.getContext('2d');
+        finalCtx.drawImage(filterCanvas, 0, 0); // 先绘制清晰滤镜层
+        finalCtx.globalCompositeOperation = 'screen';
+        finalCtx.globalAlpha = 0.35;  // 散光强度适中，保留细节
+        finalCtx.drawImage(glowCanvas, 0, 0);
+        finalCtx.globalCompositeOperation = 'source-over';
+        finalCtx.globalAlpha = 1.0;
+    }
+    
+    // 输出最终图片
     return new Promise((resolve) => {
-        offCanvas.toBlob((blob) => {
+        finalCanvas.toBlob((blob) => {
             if (blob) {
                 if (capturedBlobUrl) URL.revokeObjectURL(capturedBlobUrl);
                 capturedBlobUrl = URL.createObjectURL(blob);
@@ -449,6 +532,13 @@ async function applyFilterAndUpdate(filterIndex) {
             } else resolve(false);
         }, 'image/png');
     });
+}
+
+// 刷新当前滤镜（用于散光开关切换时）
+async function refreshCurrentFilter() {
+    if (originalImageElement) {
+        await applyFilterAndUpdate(currentFilterIndex, glowEnabled);
+    }
 }
 
 // 构建滤镜滑动条UI
@@ -469,7 +559,6 @@ function buildFilterUI() {
         filterTrack.appendChild(div);
         filterItems.push(div);
     });
-    // 滚动到当前选中项居中
     scrollToIndex(currentFilterIndex);
 }
 
@@ -486,12 +575,11 @@ function scrollToIndex(index) {
 function setFilterIndex(newIndex, updateScroll = true) {
     if (newIndex === currentFilterIndex) return;
     currentFilterIndex = newIndex;
-    // 更新UI高亮
     filterItems.forEach((item, i) => {
         if (i === currentFilterIndex) item.classList.add('active');
         else item.classList.remove('active');
     });
-    applyFilterAndUpdate(currentFilterIndex);
+    refreshCurrentFilter();
     if (updateScroll) scrollToIndex(currentFilterIndex);
 }
 
@@ -516,11 +604,23 @@ filterScrollContainer.addEventListener('scroll', () => {
         });
         if (closestIndex !== currentFilterIndex) {
             setFilterIndex(closestIndex, false);
-            // 再次精确滚动使选中项完全居中
             scrollToIndex(closestIndex);
         }
     }, 80);
 });
+
+// 散光模式切换
+function toggleGlowMode() {
+    glowEnabled = !glowEnabled;
+    if (glowEnabled) {
+        glowToggle.classList.add('active');
+    } else {
+        glowToggle.classList.remove('active');
+    }
+    refreshCurrentFilter();
+}
+
+glowToggle.addEventListener('click', toggleGlowMode);
 
 // 初始化预览（传入原始图片blob）
 async function initPreviewWithOriginal(blob) {
@@ -531,8 +631,10 @@ async function initPreviewWithOriginal(blob) {
     img.onload = async () => {
         originalImageElement = img;
         currentFilterIndex = 0;
-        buildFilterUI();          // 重新构建滤镜栏（语言相关）
-        await applyFilterAndUpdate(0);
+        glowEnabled = false;
+        glowToggle.classList.remove('active');
+        buildFilterUI();
+        await refreshCurrentFilter();
         URL.revokeObjectURL(url);
     };
     img.src = url;
@@ -635,7 +737,8 @@ function updateLanguage(lang) {
     reTakeBtn.textContent = texts.reTakeBtn;
     downloadBtn.textContent = texts.downloadBtn;
     backFromPreviewBtn.textContent = texts.backBtn;
-    if (originalImageElement) buildFilterUI(); // 重建滤镜条文字
+    glowLabel.textContent = texts.glowMode;
+    if (originalImageElement) buildFilterUI();
 }
 langToggleBtn.onclick = () => updateLanguage(currentLang === "en" ? "zh" : "en");
 
