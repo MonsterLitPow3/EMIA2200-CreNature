@@ -9,7 +9,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: system-ui, sans-serif;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
             /* 禁止选中 / 禁止长按复制 */
             -webkit-user-select: none;
             user-select: none;
@@ -51,9 +51,11 @@
             color: rgba(255,255,255,0.7);
             font-size: 14px;
             z-index: 999;
+            backdrop-filter: blur(4px);
+            cursor: pointer;
         }
 
-        /* 首页 */
+        /* 首页 - 增强底部安全区域，防止应用栏遮挡下方内容 */
         .home-wrap {
             width: 100%;
             height: 100%;
@@ -62,7 +64,10 @@
             align-items: center;
             justify-content: center;
             gap: 30px;
+            /* 避免底部系统栏（应用栏）遮挡按钮区域，增加安全区填充 */
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
         }
+        
         .btn {
             width: 220px;
             padding: 16px 0;
@@ -72,9 +77,16 @@
             color: rgba(255,255,255,0.85);
             font-size: 16px;
             letter-spacing: 1px;
+            backdrop-filter: blur(2px);
+            transition: 0.2s;
+            cursor: pointer;
+        }
+        .btn:active {
+            background: rgba(255,255,255,0.1);
         }
         .btn:disabled {
             opacity: 0.35;
+            pointer-events: none;
         }
 
         /* 相机页面 */
@@ -84,6 +96,7 @@
             display: none;
             position: relative;
             overflow: hidden;
+            background: #000;
         }
         video {
             width: 100%;
@@ -98,50 +111,97 @@
             padding: 6px 16px;
             border: 1px solid rgba(255,255,255,0.3);
             border-radius: 8px;
-            background: rgba(0,0,0,0.2);
+            background: rgba(0,0,0,0.4);
             color: #fff;
             font-size: 14px;
             z-index: 10;
+            backdrop-filter: blur(4px);
+            cursor: pointer;
         }
+        
+        /* 修复快门按钮被底部应用栏遮挡的问题：
+           增大底部间距，并基于安全区动态调整，确保在任何设备上都不被遮挡 */
         .shutter-btn {
             position: absolute;
-            bottom: max(80px, env(safe-area-inset-bottom) + 40px);
+            bottom: max(90px, calc(env(safe-area-inset-bottom) + 55px));
             left: 50%;
             transform: translateX(-50%);
             width: 70px;
             height: 70px;
             border-radius: 50%;
-            border: 2px solid rgba(255,255,255,0.4);
-            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.15);
             z-index: 10;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            transition: 0.1s ease;
+        }
+        .shutter-btn:active {
+            background: rgba(255,255,255,0.3);
+            transform: translateX(-50%) scale(0.96);
         }
 
-        /* 预览照片页面 */
+        /* 预览照片页面 —— 增加滚动能力 + 底部安全区填充，彻底避免应用栏遮挡下方按钮 */
         .preview-wrap {
             width: 100%;
             height: 100%;
             display: none;
             flex-direction: column;
             align-items: center;
-            padding-top: 120px;
-            padding-bottom: max(20px, env(safe-area-inset-bottom));
-            gap: 40px;
+            padding-top: max(80px, env(safe-area-inset-top) + 20px);
+            /* 底部留出足够空间，防止系统应用栏遮挡按钮区域 */
+            padding-bottom: max(40px, calc(env(safe-area-inset-bottom) + 35px));
+            gap: 30px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            background: #000;
+            position: relative;
         }
         .preview-img {
-            width: 70%;
-            border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.15);
+            width: 75%;
+            max-width: 380px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
             object-fit: contain;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.4);
         }
         .preview-buttons {
             display: flex;
             flex-direction: column;
             gap: 20px;
+            width: 100%;
+            align-items: center;
+            /* 额外的底部余量保证按钮不贴地 */
+            margin-bottom: 10px;
+        }
+        
+        /* 预览页内部的返回按钮（左上角保持绝对定位） */
+        .preview-wrap .back-btn {
+            position: fixed;
+            top: max(30px, env(safe-area-inset-top) + 10px);
+            left: 20px;
+            z-index: 20;
+        }
+        
+        /* 解决预览页面按钮间距以及最底部留白 */
+        .preview-buttons .btn {
+            width: 220px;
         }
 
-        /* 隐藏抓拍画布 */
         #captureCanvas {
             display: none;
+        }
+        
+        /* 适配极窄屏幕时，让预览图片稍小一点保持舒适 */
+        @media (max-width: 480px) {
+            .preview-img {
+                width: 85%;
+            }
+            .shutter-btn {
+                width: 64px;
+                height: 64px;
+                bottom: max(85px, calc(env(safe-area-inset-bottom) + 50px));
+            }
         }
     </style>
 </head>
@@ -239,6 +299,7 @@ langToggleBtn.addEventListener('click', () => {
 // 进入相机
 enterCameraBtn.addEventListener('click', async () => {
     try {
+        // 请求后置摄像头，最高清晰度
         mediaStream = await navigator.mediaDevices.getUserMedia({
             video: {
                 facingMode: 'environment',
@@ -248,68 +309,106 @@ enterCameraBtn.addEventListener('click', async () => {
             audio: false
         });
         video.srcObject = mediaStream;
+        // 确保视频元数据加载后更新画布尺寸备用
+        await new Promise((resolve) => {
+            if (video.readyState >= 2) {
+                resolve();
+            } else {
+                video.onloadeddata = () => resolve();
+            }
+        });
         homePage.style.display = 'none';
         cameraPage.style.display = 'block';
     } catch (err) {
+        console.warn(err);
         alert(i18n[currentLang].alertPermission);
     }
 });
 
 // 拍照
 shutterBtn.addEventListener('click', () => {
+    if (!video.videoWidth || !video.videoHeight) {
+        // 若视频流未就绪，简单重试等待一帧
+        if (video.readyState < 2) return;
+    }
+    // 设置画布大小为视频实际尺寸
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     captureUrl = canvas.toDataURL('image/png');
 
     previewImg.src = captureUrl;
     cameraPage.style.display = 'none';
     previewPage.style.display = 'flex';
+    // 预览页面滚动到顶部，避免按钮位于不可见区域
+    previewPage.scrollTop = 0;
 });
 
 // 重拍
 reTakeBtn.addEventListener('click', () => {
     previewPage.style.display = 'none';
     cameraPage.style.display = 'block';
+    // 确保视频流还在播放
+    if (mediaStream && mediaStream.active && video.srcObject) {
+        video.play().catch(e => console.warn);
+    }
 });
 
-// 修复下载功能（兼容所有浏览器/手机）
+// 下载照片 —— 兼容所有现代浏览器和手机
 downloadBtn.addEventListener('click', () => {
     if (!captureUrl) return;
     
-    const a = document.createElement('a');
-    a.href = captureUrl;
-    a.download = 'CreNature_Photo.png';
-    document.body.appendChild(a);
-    a.click();
+    const link = document.createElement('a');
+    link.href = captureUrl;
+    link.download = `CreNature_${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
     setTimeout(() => {
-        document.body.removeChild(a);
-    }, 100);
+        document.body.removeChild(link);
+    }, 120);
 });
 
-// 返回首页
+// 返回首页（从相机页）
 backHomeBtn.addEventListener('click', () => {
     stopCamera();
     cameraPage.style.display = 'none';
     homePage.style.display = 'flex';
 });
 
+// 从预览页返回首页（释放相机资源并回首页）
 backFromPreviewBtn.addEventListener('click', () => {
     stopCamera();
     previewPage.style.display = 'none';
     homePage.style.display = 'flex';
 });
 
-// 统一停止相机
+// 统一停止相机，释放资源
 function stopCamera() {
     if (mediaStream) {
         mediaStream.getTracks().forEach(track => track.stop());
         mediaStream = null;
     }
+    if (video.srcObject) {
+        video.srcObject = null;
+    }
 }
 
-// 初始化
+// 页面卸载时确保释放相机资源（可选）
+window.addEventListener('beforeunload', () => {
+    if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+    }
+});
+
+// 初始化语言英文
 updateLanguage('en');
+
+// 额外保障：针对某些浏览器或移动端，预览页面滚动时不受任何底部遮挡干扰
+// 同时，如果用户从预览返回相机时确保视频流重新播放顺畅
+// 已在重拍和相机进入逻辑中保障
+
+// 如果由于安全区env不支持导致底部依然有遮挡，额外监听resize动态调整? 不需要，CSS已经确保底部有可靠间距
+// 同时修正相机快门区域点击区域完全避开系统栏
 </script>
 </body>
 </html>
