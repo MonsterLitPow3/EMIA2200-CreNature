@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>CreNature - 仿生相机 & 交互装置</title>
+    <title>CreNature - 仿生相機 & 交互裝置</title>
     <style>
         * {
             margin: 0;
@@ -113,7 +113,7 @@
             z-index: 10;
             max-width: 1300px;
             margin: 0 auto;
-            padding: 2rem 1.5rem 5rem;
+            padding: 4rem 1.5rem 5rem; /* 頂部間距加大，解決標題貼太近 */
         }
         .intro-back-btn {
             position: fixed;
@@ -131,7 +131,7 @@
         }
         .hero-intro {
             text-align: center;
-            padding: 1rem 0;
+            padding: 2rem 0 1rem; /* 增加內間距 */
         }
         .hero-intro h1 {
             font-size: 3.5rem;
@@ -335,7 +335,7 @@
 <body>
 <button class="lang-btn" id="globalLangBtn">中文</button>
 
-<!-- 主页 -->
+<!-- 主頁 -->
 <div id="homePage" class="page active-page">
     <div class="home-wrap">
         <button class="btn" id="enterCameraBtn">📷 Enter Camera</button>
@@ -343,7 +343,7 @@
     </div>
 </div>
 
-<!-- 项目介绍页面 -->
+<!-- 項目介紹頁面 -->
 <div id="introPage" class="page intro-page">
     <div class="floating-bg" id="floatingBg"></div>
     <button id="introBackHomeBtn" class="intro-back-btn">🏠 Back to Home</button>
@@ -351,7 +351,7 @@
     <footer>CreNature — Redefining the interface between organisms and machines</footer>
 </div>
 
-<!-- 模态框 -->
+<!-- 模態框 -->
 <div id="blogModal" class="modal-overlay">
     <div class="modal-content">
         <h2 id="modalTitle"></h2>
@@ -361,7 +361,7 @@
 </div>
 
 <script>
-    // ======================= 国际化 (英文+繁体中文) =======================
+    // ======================= 國際化 (英文+繁體中文) =======================
     const i18nFull = {
         en: {
             heroTitle: "CreNature: Bionic Installation",
@@ -424,7 +424,7 @@
                     zh: "## 工程挑戰與解決方案\n\n1. **電源干擾**：充電寶導致舵機抖動 → 在VCC/GND之間並聯0.1µF電容，信號線串聯1kΩ電阻，並強化共地。\n2. **舵機死區**：SG90動作卡頓 → 加大步長從1°到2°，更換不良舵機。\n3. **重力塌陷**：特定角度底部扭力不足 → 實現角度約束邏輯，動態調整中/上部極限。\n4. **線纜管理**：所有電線經由空心樹幹與樹枝內部，焊接加固並纏繞電工膠布。" }
     };
 
-    let currentLang = "en";
+    let currentLang = "en"; // 預設英文
     let carouselIndex = 0;
     let autoInterval = null;
     let introRendered = false;
@@ -432,7 +432,7 @@
     const homePage = document.getElementById('homePage');
     const introPage = document.getElementById('introPage');
 
-    // 动态背景
+    // 動態背景
     function initFloatingDrops() {
         const container = document.getElementById('floatingBg');
         if (!container || container.children.length > 0) return;
@@ -452,7 +452,7 @@
     }
 
     function renderIntroPage() {
-        if (introRendered && document.getElementById('introDynamicContent').innerHTML !== '') return;
+        introRendered = false;
         const t = i18nFull[currentLang];
         const container = document.getElementById('introDynamicContent');
         if (!container) return;
@@ -540,7 +540,7 @@
     function showBlogModal(key) { const modal = document.getElementById('blogModal'); const titleEl = document.getElementById('modalTitle'); const bodyEl = document.getElementById('modalBody'); const detail = blogDetails[key]; if (!detail) return; const content = currentLang === 'en' ? detail.en : detail.zh; const titleMap = { concept: currentLang === 'en' ? "Biomimetic Design" : "仿生設計", mechanics: currentLang === 'en' ? "Robotic Mechanics" : "機械結構", lighting: currentLang === 'en' ? "Lighting & Atmosphere" : "燈光氛圍", audio: currentLang === 'en' ? "Audio Narrative" : "音樂敘事", control: currentLang === 'en' ? "Interactive Logic" : "互動邏輯", challenge: currentLang === 'en' ? "Engineering Challenges" : "工程挑戰" }; titleEl.textContent = titleMap[key] || "Details"; bodyEl.innerHTML = content.replace(/\n/g, '<br>'); modal.style.display = 'flex'; }
     function closeModal() { document.getElementById('blogModal').style.display = 'none'; }
 
-    // 页面切换
+    // 頁面切換
     function setActivePage(page) {
         [homePage, introPage].forEach(p => {
             p.classList.remove('active-page');
@@ -556,7 +556,7 @@
         if (page === homePage && autoInterval) clearInterval(autoInterval);
     }
 
-    // 按钮事件
+    // 按鈕事件
     document.getElementById('enterCameraBtn').onclick = () => {
         window.location.href = "https://monsterlitpow3.github.io/CreNature-Photo/CreNaturePhoto.html";
     };
@@ -567,6 +567,7 @@
         document.getElementById('globalLangBtn').textContent = currentLang === 'en' ? '中文' : 'English';
         document.getElementById('enterCameraBtn').textContent = currentLang === 'en' ? '📷 Enter Camera' : '📷 進入相機';
         document.getElementById('introBtn').textContent = currentLang === 'en' ? '🌿 Project Intro · CreNature' : '🌿 項目介紹 · CreNature';
+        document.getElementById('introBackHomeBtn').textContent = currentLang === 'en' ? '🏠 Back to Home' : '🏠 返回主頁';
         if (introPage.classList.contains('active-page')) renderIntroPage();
     };
     document.getElementById('closeModalBtn').onclick = closeModal;
@@ -576,7 +577,7 @@
     setActivePage(homePage);
     initFloatingDrops();
 
-    // 浮动动画
+    // 浮動動畫
     const styleSheet = document.createElement("style");
     styleSheet.textContent = `@keyframes floatUpDown { 0% { transform: translateY(0) scale(1); opacity: 0.2; } 50% { transform: translateY(-50px) scale(1.3); opacity: 0.5; } 100% { transform: translateY(0) scale(1); opacity: 0.2; } }`;
     document.head.appendChild(styleSheet);
