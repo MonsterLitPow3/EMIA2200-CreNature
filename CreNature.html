@@ -503,7 +503,9 @@
     }
 
     function buildCarouselDOM(slideLabels) {
-        const galleryImages = ["0002.jpeg", "0003.jpeg", "0001.jpeg", "0004.jpeg", "0005.jpeg", "0006.jpeg"];
+        // ✅ 這裡已修復：1、2、5 改成 .jpg，其他維持 .jpeg
+        const galleryImages = ["0002.jpg", "0003.jpeg", "0001.jpg", "0004.jpeg", "0005.jpg", "0006.jpeg"];
+        
         const track = document.getElementById('carouselTrack');
         const dotsContainer = document.getElementById('carouselDots');
         if (!track) return;
